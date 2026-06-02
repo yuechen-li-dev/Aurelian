@@ -1,0 +1,2689 @@
+#![allow(non_snake_case)]
+
+use std::collections::{HashMap, HashSet};
+
+use super::ast::*;
+use super::diagnostic::SdslvDiagnostic;
+use super::parser::{ParseSource, ParseTestSource};
+use super::token::SdslvSpan;
+
+pub fn ValidateSource(source: &str) -> Result<SdslvModule, Vec<SdslvDiagnostic>> {
+    let module = ParseSource(source)?;
+    ValidateModule(&module)?;
+    Ok(module)
+}
+
+pub fn ValidateTestSource(source: &str) -> Result<SdslvTestModule, Vec<SdslvDiagnostic>> {
+    let module = ParseTestSource(source)?;
+    ValidateTestModule(&module)?;
+    Ok(module)
+}
+
+pub fn ValidateTestModule(module: &SdslvTestModule) -> Result<(), Vec<SdslvDiagnostic>> {
+    let mut diagnostics = vec![];
+    let mut names = HashSet::new();
+    for test in &module.Tests {
+        if !names.insert(test.Name.clone()) {
+            diagnostics.push(SdslvDiagnostic::New(
+                &format!("duplicate test function '{}'", test.Name),
+                test.Span,
+            ));
+        }
+        let mut has_fact = false;
+        let mut has_theory = false;
+        let mut inline_rows: Vec<&SdslvAttribute> = vec![];
+        for attribute in &test.Attributes {
+            if attribute.Name == "Fact" {
+                has_fact = true;
+                if !attribute.Arguments.is_empty() {
+                    diagnostics.push(SdslvDiagnostic::New(
+                        "[Fact] does not accept arguments",
+                        attribute.Span,
+                    ));
+                }
+            } else if attribute.Name == "Theory" {
+                has_theory = true;
+                if !attribute.Arguments.is_empty() {
+                    diagnostics.push(SdslvDiagnostic::New(
+                        "[Theory] does not accept arguments",
+                        attribute.Span,
+                    ));
+                }
+            } else if attribute.Name == "InlineData" {
+                inline_rows.push(attribute);
+            } else {
+                diagnostics.push(SdslvDiagnostic::New(
+                    &format!(
+                        "unsupported test attribute '{}' in SDSL-V M7a",
+                        attribute.Name
+                    ),
+                    attribute.Span,
+                ));
+            }
+        }
+        if has_fact && has_theory {
+            diagnostics.push(SdslvDiagnostic::New(
+                "test function cannot have both [Fact] and [Theory]",
+                test.Span,
+            ));
+        }
+        if has_fact && !test.Parameters.is_empty() {
+            diagnostics.push(SdslvDiagnostic::New(
+                &format!("[Fact] test '{}' must not declare parameters", test.Name),
+                test.Span,
+            ));
+        }
+        if has_fact && !inline_rows.is_empty() {
+            for inline_data in inline_rows.iter() {
+                diagnostics.push(SdslvDiagnostic::New(
+                    "[InlineData] is only valid on [Theory] tests",
+                    inline_data.Span,
+                ));
+            }
+        }
+        if has_theory {
+            if inline_rows.is_empty() {
+                diagnostics.push(SdslvDiagnostic::New(
+                    "[Theory] requires at least one [InlineData(...)] row",
+                    test.Span,
+                ));
+            }
+            if test.Parameters.is_empty() {
+                diagnostics.push(SdslvDiagnostic::New(
+                    "[Theory] test must declare parameters matching InlineData rows",
+                    test.Span,
+                ));
+            }
+            for inline_data in inline_rows.iter() {
+                if inline_data.Arguments.len() != test.Parameters.len() {
+                    diagnostics.push(SdslvDiagnostic::New(
+                        &format!(
+                            "InlineData arity mismatch: expected {} values, found {}",
+                            test.Parameters.len(),
+                            inline_data.Arguments.len()
+                        ),
+                        inline_data.Span,
+                    ));
+                    continue;
+                }
+                for (index, argument) in inline_data.Arguments.iter().enumerate() {
+                    let parameter = &test.Parameters[index];
+                    ValidateInlineDataValueType(argument, parameter, &mut diagnostics);
+                }
+            }
+        } else if !inline_rows.is_empty() {
+            for inline_data in inline_rows.iter() {
+                diagnostics.push(SdslvDiagnostic::New(
+                    "[InlineData] is only valid on [Theory] tests",
+                    inline_data.Span,
+                ));
+            }
+        }
+        for statement in &test.Body.Statements {
+            if let SdslvStatement::Expression { Value } = statement {
+                ValidateTestExpression(Value, &mut diagnostics);
+            }
+        }
+    }
+    if diagnostics.is_empty() {
+        Ok(())
+    } else {
+        Err(diagnostics)
+    }
+}
+
+fn ValidateInlineDataValueType(
+    value: &SdslvExpression,
+    parameter: &SdslvFunctionParameter,
+    diagnostics: &mut Vec<SdslvDiagnostic>,
+) {
+    let Some(path) = parameter.TypeName.AsNamedPath() else {
+        diagnostics.push(SdslvDiagnostic::New(
+            &format!(
+                "InlineData type mismatch for parameter '{}': unsupported parameter type '{}'",
+                parameter.Name,
+                parameter.TypeName.ToDisplayString()
+            ),
+            SdslvSpan {
+                Start: 0,
+                End: 0,
+                Line: 1,
+                Column: 1,
+            },
+        ));
+        return;
+    };
+    let expected = path.Segments.last().map(|x| x.as_str()).unwrap_or("");
+    let found = match value {
+        SdslvExpression::IntegerLiteral(_) => "i32",
+        SdslvExpression::FloatLiteral(_) => "f32",
+        SdslvExpression::BoolLiteral(_) => "bool",
+        SdslvExpression::StringLiteral(_) => "string",
+        _ => {
+            diagnostics.push(SdslvDiagnostic::New(
+                &format!(
+                    "InlineData values must be literal expressions for parameter '{}'",
+                    parameter.Name
+                ),
+                SdslvSpan {
+                    Start: 0,
+                    End: 0,
+                    Line: 1,
+                    Column: 1,
+                },
+            ));
+            return;
+        }
+    };
+    let matches = match expected {
+        "i32" | "u32" => found == "i32",
+        "f32" | "float" => found == "f32" || found == "i32",
+        "bool" => found == "bool",
+        _ => false,
+    };
+    if !matches {
+        diagnostics.push(SdslvDiagnostic::New(
+            &format!(
+                "InlineData type mismatch for parameter '{}': expected {}, found {}",
+                parameter.Name, expected, found
+            ),
+            SdslvSpan {
+                Start: 0,
+                End: 0,
+                Line: 1,
+                Column: 1,
+            },
+        ));
+    }
+}
+
+fn ValidateTestExpression(expression: &SdslvExpression, diagnostics: &mut Vec<SdslvDiagnostic>) {
+    let SdslvExpression::Call { Callee, Arguments } = expression else {
+        diagnostics.push(SdslvDiagnostic::New(
+            "non-assert expression statement is not supported in SDSL-V M7a",
+            SdslvSpan {
+                Start: 0,
+                End: 0,
+                Line: 1,
+                Column: 1,
+            },
+        ));
+        return;
+    };
+    let SdslvExpression::FieldAccess { Base, Field } = &**Callee else {
+        diagnostics.push(SdslvDiagnostic::New(
+            "non-assert expression statement is not supported in SDSL-V M7a",
+            SdslvSpan {
+                Start: 0,
+                End: 0,
+                Line: 1,
+                Column: 1,
+            },
+        ));
+        return;
+    };
+    let SdslvExpression::Identifier(base_name) = &**Base else {
+        diagnostics.push(SdslvDiagnostic::New(
+            "non-assert expression statement is not supported in SDSL-V M7a",
+            SdslvSpan {
+                Start: 0,
+                End: 0,
+                Line: 1,
+                Column: 1,
+            },
+        ));
+        return;
+    };
+    if base_name != "Assert" {
+        diagnostics.push(SdslvDiagnostic::New(
+            "non-assert expression statement is not supported in SDSL-V M7a",
+            SdslvSpan {
+                Start: 0,
+                End: 0,
+                Line: 1,
+                Column: 1,
+            },
+        ));
+        return;
+    }
+    let expected = match Field.as_str() {
+        "True" => 2,
+        "Equals" => 3,
+        "Near" => 4,
+        _ => {
+            diagnostics.push(SdslvDiagnostic::New(
+                &format!("unsupported Assert method 'Assert.{}' in SDSL-V M7a", Field),
+                SdslvSpan {
+                    Start: 0,
+                    End: 0,
+                    Line: 1,
+                    Column: 1,
+                },
+            ));
+            return;
+        }
+    };
+    if Arguments.len() != expected {
+        diagnostics.push(SdslvDiagnostic::New(
+            &format!("Assert.{} requires {} arguments", Field, expected),
+            SdslvSpan {
+                Start: 0,
+                End: 0,
+                Line: 1,
+                Column: 1,
+            },
+        ));
+        return;
+    }
+    if !matches!(Arguments.last(), Some(SdslvExpression::StringLiteral(_))) {
+        diagnostics.push(SdslvDiagnostic::New(
+            &format!("Assert.{} requires a custom message string argument", Field),
+            SdslvSpan {
+                Start: 0,
+                End: 0,
+                Line: 1,
+                Column: 1,
+            },
+        ));
+    }
+}
+
+pub fn ValidateModule(module: &SdslvModule) -> Result<(), Vec<SdslvDiagnostic>> {
+    let mut validator = Validator::New(module);
+    validator.Validate();
+    if validator.Diagnostics.is_empty() {
+        Ok(())
+    } else {
+        Err(validator.Diagnostics)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TypeRef {
+    Named(String),
+    Array {
+        Element: Box<TypeRef>,
+        Length: usize,
+    },
+    Unknown,
+}
+
+impl TypeRef {
+    fn Name(&self) -> Option<&str> {
+        match self {
+            TypeRef::Named(name) => Some(name.as_str()),
+            TypeRef::Array { .. } => None,
+            TypeRef::Unknown => None,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct FunctionSignature {
+    Name: String,
+    Parameters: Vec<TypeRef>,
+    ReturnType: TypeRef,
+    IsFallible: bool,
+}
+
+struct Validator<'a> {
+    Module: &'a SdslvModule,
+    Diagnostics: Vec<SdslvDiagnostic>,
+    TopLevelKinds: HashMap<String, &'static str>,
+    InterfaceByName: HashMap<String, &'a SdslvInterfaceDecl>,
+    ShaderByName: HashMap<String, &'a SdslvShaderDecl>,
+    CompileAliases: HashSet<String>,
+    StreamByName: HashMap<String, &'a SdslvStreamDecl>,
+    RecordByName: HashMap<String, &'a SdslvRecordDecl>,
+    MaterialFieldsByShader: HashMap<String, HashMap<String, String>>,
+    AliasUnderlyingByName: HashMap<String, String>,
+    SemanticAliasNames: HashSet<String>,
+    FunctionSignatures: HashMap<String, FunctionSignature>,
+    EnumByName: HashMap<String, &'a SdslvEnumDecl>,
+}
+
+impl<'a> Validator<'a> {
+    fn New(module: &'a SdslvModule) -> Self {
+        Self {
+            Module: module,
+            Diagnostics: vec![],
+            TopLevelKinds: HashMap::new(),
+            InterfaceByName: HashMap::new(),
+            ShaderByName: HashMap::new(),
+            CompileAliases: HashSet::new(),
+            StreamByName: HashMap::new(),
+            RecordByName: HashMap::new(),
+            MaterialFieldsByShader: HashMap::new(),
+            AliasUnderlyingByName: HashMap::new(),
+            SemanticAliasNames: HashSet::new(),
+            FunctionSignatures: HashMap::new(),
+            EnumByName: HashMap::new(),
+        }
+    }
+
+    fn Validate(&mut self) {
+        self.ValidateUses();
+        self.BuildTopLevelNames();
+        self.BuildTypeEnvironment();
+        self.BuildFunctionSignatures();
+        for decl in &self.Module.Declarations {
+            match decl {
+                SdslvDecl::TypeAlias(alias) => self.ValidateTypeAlias(alias),
+                SdslvDecl::Stream(stream) => self.ValidateStream(stream),
+                SdslvDecl::Record(record) => self.ValidateRecord(record),
+                SdslvDecl::Interface(interface) => self.ValidateInterface(interface),
+                SdslvDecl::Shader(shader) => self.ValidateShader(shader),
+                SdslvDecl::Flow(flow) => self.ValidateFlow(flow),
+                SdslvDecl::Compile(compile) => self.ValidateCompile(compile),
+                SdslvDecl::Enum(enum_decl) => self.ValidateEnum(enum_decl),
+            }
+        }
+        self.ValidateFunctionBodies();
+    }
+
+    fn BuildTypeEnvironment(&mut self) {
+        for decl in &self.Module.Declarations {
+            if let SdslvDecl::TypeAlias(alias) = decl {
+                let target_name = alias.TargetType.ToDisplayString();
+                self.AliasUnderlyingByName
+                    .insert(alias.Name.clone(), target_name);
+                if alias.SpaceAnnotation.is_some() {
+                    self.SemanticAliasNames.insert(alias.Name.clone());
+                }
+            }
+            if let SdslvDecl::Stream(stream) = decl {
+                self.StreamByName.insert(stream.Name.clone(), stream);
+            }
+            if let SdslvDecl::Record(record) = decl {
+                self.RecordByName.insert(record.Name.clone(), record);
+            }
+            if let SdslvDecl::Enum(enum_decl) = decl {
+                self.EnumByName.insert(enum_decl.Name.clone(), enum_decl);
+            }
+            if let SdslvDecl::Shader(shader) = decl {
+                let mut fields = HashMap::new();
+                for field in &shader.MaterialFields {
+                    fields.insert(field.Name.clone(), field.TypeName.ToDisplayString());
+                }
+                self.MaterialFieldsByShader
+                    .insert(shader.Name.clone(), fields);
+            }
+        }
+    }
+
+    fn BuildFunctionSignatures(&mut self) {
+        for decl in &self.Module.Declarations {
+            match decl {
+                SdslvDecl::Interface(interface) => {
+                    for method in &interface.Methods {
+                        self.RegisterFunctionSignature(&method.Name, method);
+                    }
+                }
+                SdslvDecl::Shader(shader) => {
+                    for method in &shader.Methods {
+                        self.RegisterFunctionSignature(&method.Name, method);
+                        self.RegisterFunctionSignature(
+                            &format!("{}_{}", shader.Name, method.Name),
+                            method,
+                        );
+                    }
+                    for stage_method in &shader.StageMethods {
+                        self.RegisterFunctionSignature(&stage_method.Name, stage_method);
+                        self.RegisterFunctionSignature(
+                            &format!("{}_{}", shader.Name, stage_method.Name),
+                            stage_method,
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn RegisterFunctionSignature(&mut self, name: &str, function: &SdslvFunctionDecl) {
+        if self.FunctionSignatures.contains_key(name) {
+            return;
+        }
+        let parameters = function
+            .Parameters
+            .iter()
+            .map(|parameter| self.TypeRefToType(&parameter.TypeName))
+            .collect();
+        let return_type = self.TypeRefToType(&function.ReturnType);
+        let is_fallible = function.ErrorType.is_some();
+        self.FunctionSignatures.insert(
+            name.to_string(),
+            FunctionSignature {
+                Name: name.to_string(),
+                Parameters: parameters,
+                ReturnType: return_type,
+                IsFallible: is_fallible,
+            },
+        );
+    }
+
+    fn BuildTopLevelNames(&mut self) {
+        /* unchanged from old */
+        for decl in &self.Module.Declarations {
+            let (name, kind) = match decl {
+                SdslvDecl::TypeAlias(x) => (&x.Name, "type"),
+                SdslvDecl::Stream(x) => (&x.Name, "stream"),
+                SdslvDecl::Record(x) => (&x.Name, "record"),
+                SdslvDecl::Interface(x) => (&x.Name, "interface"),
+                SdslvDecl::Shader(x) => (&x.Name, "shader"),
+                SdslvDecl::Flow(x) => (&x.Name, "flow"),
+                SdslvDecl::Compile(x) => (&x.Alias, "compile"),
+                SdslvDecl::Enum(x) => (&x.Name, "enum"),
+            };
+            if let Some(existing_kind) = self.TopLevelKinds.insert(name.clone(), kind) {
+                self.Err(&format!(
+                    "duplicate top-level declaration '{}' ({} and {})",
+                    name, existing_kind, kind
+                ));
+            }
+            if let SdslvDecl::Interface(interface) = decl {
+                self.InterfaceByName
+                    .insert(interface.Name.clone(), interface);
+            }
+            if let SdslvDecl::Shader(shader) = decl {
+                self.ShaderByName.insert(shader.Name.clone(), shader);
+            }
+        }
+    }
+
+    fn ValidateUses(&mut self) {
+        let mut used = HashSet::new();
+        for use_decl in &self.Module.Uses {
+            let key = use_decl.Path.Segments.join(".");
+            if !used.insert(key.clone()) {
+                self.Err(&format!("duplicate use declaration '{}'", key));
+            }
+        }
+    }
+    fn ValidateTypeAlias(&mut self, alias: &SdslvTypeAliasDecl) {
+        if let Some(space) = &alias.SpaceAnnotation {
+            if space.Segments.is_empty() {
+                self.Err(&format!(
+                    "type alias '{}' has empty @space() annotation",
+                    alias.Name
+                ));
+            }
+        }
+    }
+    fn ValidateStream(&mut self, stream: &SdslvStreamDecl) {
+        let mut names = HashSet::new();
+        for field in &stream.Fields {
+            if !names.insert(field.Name.clone()) {
+                self.Err(&format!(
+                    "duplicate stream field '{}' in stream '{}'",
+                    field.Name, stream.Name
+                ));
+            }
+        }
+    }
+    fn ValidateRecord(&mut self, record: &SdslvRecordDecl) {
+        let mut names = HashSet::new();
+        for field in &record.Fields {
+            if !names.insert(field.Name.clone()) {
+                self.Err(&format!(
+                    "duplicate record field '{}' in record '{}'",
+                    field.Name, record.Name
+                ));
+            }
+        }
+    }
+
+    fn ValidateInterface(&mut self, interface: &SdslvInterfaceDecl) {
+        let mut names = HashSet::new();
+        for method in &interface.Methods {
+            if !names.insert(method.Name.clone()) {
+                self.Err(&format!(
+                    "duplicate interface method '{}' in interface '{}'",
+                    method.Name, interface.Name
+                ));
+            }
+            if method.Body.is_some() {
+                self.Err(&format!(
+                    "interface method '{}' in interface '{}' cannot have a body",
+                    method.Name, interface.Name
+                ));
+            }
+        }
+    }
+
+    fn ValidateShader(&mut self, shader: &SdslvShaderDecl) {
+        self.ValidateGenericConstraints(shader);
+        self.ValidateShaderDuplicates(shader);
+        self.ValidateStages(shader);
+        self.ValidateImplementsAndOverrides(shader);
+    }
+
+    fn ValidateEnum(&mut self, enum_decl: &SdslvEnumDecl) {
+        if enum_decl.Variants.is_empty() {
+            self.Diagnostics.push(SdslvDiagnostic::New(
+                "enum must have at least one variant",
+                enum_decl.Span,
+            ));
+            return;
+        }
+        let mut seen = HashSet::new();
+        for variant in &enum_decl.Variants {
+            if !seen.insert(variant.Name.clone()) {
+                self.Diagnostics.push(SdslvDiagnostic::New(
+                    &format!("duplicate enum variant '{}'", variant.Name),
+                    variant.Span,
+                ));
+            }
+        }
+    }
+    fn ValidateCompile(&mut self, compile: &SdslvCompileDecl) {
+        /* keep old logic */
+        if let Some(kind) = self.TopLevelKinds.get(&compile.Alias)
+            && *kind != "compile"
+        {
+            self.Err(&format!(
+                "compile alias '{}' collides with top-level declaration",
+                compile.Alias
+            ));
+        }
+        if !self.CompileAliases.insert(compile.Alias.clone()) {
+            self.Err(&format!("duplicate compile alias '{}'", compile.Alias));
+        }
+        let generic_name = compile.GenericShader.Segments.join(".");
+        let Some(shader) = self.ShaderByName.get(&generic_name) else {
+            self.Err(&format!(
+                "compile references unknown generic shader '{}'",
+                generic_name
+            ));
+            return;
+        };
+        let shader_name = shader.Name.clone();
+        let shader_generics = shader.GenericParameters.clone();
+        let shader_constraints = shader.Constraints.clone();
+        if shader_generics.is_empty() {
+            self.Err(&format!("compile target '{}' is not generic", shader.Name));
+            return;
+        }
+        if shader_generics.len() != compile.TypeArguments.len() {
+            self.Err(&format!(
+                "compile '{}' expected {} type arguments but got {}",
+                shader_name,
+                shader_generics.len(),
+                compile.TypeArguments.len()
+            ));
+            return;
+        }
+        for arg in &compile.TypeArguments {
+            let arg_name = arg.ToDisplayString();
+            if !self.ShaderByName.contains_key(&arg_name) {
+                self.Err(&format!(
+                    "compile type argument '{}' is not a known shader",
+                    arg_name
+                ));
+            }
+        }
+        for constraint in &shader_constraints {
+            let Some(index) = shader_generics
+                .iter()
+                .position(|x| x == &constraint.ParameterName)
+            else {
+                continue;
+            };
+            if index >= compile.TypeArguments.len() {
+                continue;
+            }
+            let concrete_name = compile.TypeArguments[index].ToDisplayString();
+            let Some(concrete_shader) = self.ShaderByName.get(&concrete_name) else {
+                continue;
+            };
+            let implements = concrete_shader.Implements.clone();
+            for bound in &constraint.Bounds {
+                if !implements.iter().any(|x| x == bound) {
+                    self.Err(&format!("compile alias '{}' constraint not satisfied: shader '{}' does not implement '{}'", compile.Alias, concrete_name, bound.Segments.join(".")));
+                }
+            }
+        }
+    }
+
+    fn ValidateFunctionBodies(&mut self) {
+        for decl in &self.Module.Declarations {
+            if let SdslvDecl::Shader(shader) = decl {
+                for method in &shader.Methods {
+                    self.ValidateFunctionBody(shader, method);
+                }
+                for stage_method in &shader.StageMethods {
+                    self.ValidateFunctionBody(shader, stage_method);
+                }
+            }
+        }
+    }
+    fn ValidateFlow(&mut self, flow: &SdslvFlowDecl) {
+        if flow.Parameters.iter().any(|x| x.Name == "board") {
+            self.Err(&format!(
+                "flow '{}' declares reserved parameter name 'board'",
+                flow.Name
+            ));
+        }
+        let board_fields = self.BuildFlowBoardFieldMap(flow);
+        if let Some(board) = &flow.Board {
+            self.ValidateFlowBoard(flow, board);
+        }
+        if flow.States.is_empty() {
+            self.Err(&format!(
+                "flow '{}' must declare at least one state",
+                flow.Name
+            ));
+            return;
+        }
+        let mut names = HashSet::new();
+        for state in &flow.States {
+            if !names.insert(state.Name.clone()) {
+                self.Err(&format!(
+                    "duplicate state '{}' in flow '{}'",
+                    state.Name, flow.Name
+                ));
+            }
+        }
+        for state in &flow.States {
+            if state.Statements.is_empty() {
+                self.Err(&format!(
+                    "state '{}' in flow '{}' must contain at least one statement",
+                    state.Name, flow.Name
+                ));
+            }
+            for statement in &state.Statements {
+                self.ValidateFlowStatement(flow, state, statement, &names, &board_fields);
+            }
+        }
+    }
+
+    fn BuildFlowBoardFieldMap(&self, flow: &SdslvFlowDecl) -> HashMap<String, TypeRef> {
+        let mut fields = HashMap::new();
+        if let Some(board) = &flow.Board {
+            for field in &board.Fields {
+                fields.insert(field.Name.clone(), self.TypeRefToType(&field.TypeName));
+            }
+        }
+        fields
+    }
+
+    fn ValidateFlowBoard(&mut self, flow: &SdslvFlowDecl, board: &SdslvFlowBoard) {
+        if board.Fields.is_empty() {
+            self.Err(&format!(
+                "flow '{}' board must declare at least one field",
+                flow.Name
+            ));
+        }
+        let mut names = HashSet::new();
+        for field in &board.Fields {
+            if !names.insert(field.Name.clone()) {
+                self.Err(&format!(
+                    "duplicate board field '{}' in flow '{}'",
+                    field.Name, flow.Name
+                ));
+            }
+            let type_name = field.TypeName.ToDisplayString();
+            if !self.IsValidFlowBoardTypeName(&type_name) {
+                self.Err(&format!(
+                    "unknown or unsupported board field type '{}' in flow '{}'",
+                    type_name, flow.Name
+                ));
+            }
+        }
+    }
+    fn ValidateFlowStatement(
+        &mut self,
+        flow: &SdslvFlowDecl,
+        state: &SdslvFlowState,
+        statement: &SdslvFlowStatement,
+        state_names: &HashSet<String>,
+        board_fields: &HashMap<String, TypeRef>,
+    ) {
+        let locals = self.BuildFlowLocals(flow, board_fields);
+        let return_type = self.TypeRefToType(&flow.ReturnType);
+        match statement {
+            SdslvFlowStatement::Goto(path) => self.ValidateFlowGoto(flow, path, state_names),
+            SdslvFlowStatement::Return(value) => {
+                self.ValidateFlowBoardReads(flow, value, board_fields);
+                let actual = self.ResolveFlowExpressionType(&locals, value);
+                if let Some((prefix, expected, found)) = self.TypeMismatch(
+                    &format!("return type mismatch in flow '{}'", flow.Name),
+                    &return_type,
+                    &actual,
+                ) {
+                    self.Err(&format!(
+                        "{}: expected {}, found {}",
+                        prefix, expected, found
+                    ));
+                }
+            }
+            SdslvFlowStatement::BoardAssign { Field, Value, .. } => {
+                if flow.Board.is_none() {
+                    self.Err(&format!(
+                        "flow '{}' does not declare a board, but statement writes board.{}",
+                        flow.Name, Field
+                    ));
+                    return;
+                }
+                let Some(expected) = board_fields.get(Field) else {
+                    self.Err(&format!(
+                        "unknown board field '{}' in flow '{}'",
+                        Field, flow.Name
+                    ));
+                    return;
+                };
+                self.ValidateFlowBoardReads(flow, Value, board_fields);
+                let actual = self.ResolveFlowExpressionType(&locals, Value);
+                if let Some((prefix, expected_name, found_name)) =
+                    self.TypeMismatch("board assignment type mismatch", expected, &actual)
+                {
+                    self.Err(&format!(
+                        "{}: expected {}, found {}",
+                        prefix, expected_name, found_name
+                    ));
+                }
+            }
+            SdslvFlowStatement::When(when) => {
+                if when.Cases.is_empty() {
+                    self.Err(&format!(
+                        "guard when in state '{}' must include at least one case",
+                        state.Name
+                    ));
+                }
+                if when.ElseAction.is_none() {
+                    self.Err(&format!(
+                        "guard when in state '{}' must include else",
+                        state.Name
+                    ));
+                }
+                for case in &when.Cases {
+                    self.ValidateFlowBoardReads(flow, &case.Condition, board_fields);
+                    let cond_type = self.ResolveFlowExpressionType(&locals, &case.Condition);
+                    if cond_type.Name().is_some()
+                        && !self.AreCompatible(&TypeRef::Named("bool".to_string()), &cond_type)
+                    {
+                        self.Err(&format!(
+                            "guard condition type mismatch in flow '{}': expected bool, found {}",
+                            flow.Name,
+                            self.TypeName(&cond_type)
+                        ));
+                    }
+                    if let SdslvFlowAction::Goto(path) = &case.Action {
+                        self.ValidateFlowGoto(flow, path, state_names);
+                    }
+                    if let SdslvFlowAction::Return(value) = &case.Action {
+                        self.ValidateFlowBoardReads(flow, value, board_fields);
+                        let actual = self.ResolveFlowExpressionType(&locals, value);
+                        if let Some((prefix, expected, found)) = self.TypeMismatch(
+                            &format!("return type mismatch in flow '{}'", flow.Name),
+                            &return_type,
+                            &actual,
+                        ) {
+                            self.Err(&format!(
+                                "{}: expected {}, found {}",
+                                prefix, expected, found
+                            ));
+                        }
+                    }
+                }
+                if let Some(action) = &when.ElseAction
+                    && let SdslvFlowAction::Goto(path) = action
+                {
+                    self.ValidateFlowGoto(flow, path, state_names);
+                }
+                if let Some(action) = &when.ElseAction
+                    && let SdslvFlowAction::Return(value) = action
+                {
+                    self.ValidateFlowBoardReads(flow, value, board_fields);
+                    let actual = self.ResolveFlowExpressionType(&locals, value);
+                    if let Some((prefix, expected, found)) = self.TypeMismatch(
+                        &format!("return type mismatch in flow '{}'", flow.Name),
+                        &return_type,
+                        &actual,
+                    ) {
+                        self.Err(&format!(
+                            "{}: expected {}, found {}",
+                            prefix, expected, found
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    fn BuildFlowLocals(
+        &self,
+        flow: &SdslvFlowDecl,
+        board_fields: &HashMap<String, TypeRef>,
+    ) -> HashMap<String, TypeRef> {
+        let mut locals = HashMap::new();
+        for parameter in &flow.Parameters {
+            locals.insert(
+                parameter.Name.clone(),
+                self.TypeRefToType(&parameter.TypeName),
+            );
+        }
+        locals.insert(
+            "board".to_string(),
+            TypeRef::Named("__flow_board".to_string()),
+        );
+        for (name, ty) in board_fields {
+            locals.insert(format!("board.{}", name), ty.clone());
+        }
+        locals
+    }
+
+    fn ValidateFlowBoardReads(
+        &mut self,
+        flow: &SdslvFlowDecl,
+        expression: &SdslvExpression,
+        board_fields: &HashMap<String, TypeRef>,
+    ) {
+        if let Some(field_name) = Self::TryGetBoardFieldRead(expression) {
+            if flow.Board.is_none() {
+                self.Err(&format!(
+                    "flow '{}' does not declare a board, but expression references board.{}",
+                    flow.Name, field_name
+                ));
+            } else if !board_fields.contains_key(&field_name) {
+                self.Err(&format!(
+                    "unknown board field '{}' in flow '{}'",
+                    field_name, flow.Name
+                ));
+            }
+        }
+        match expression {
+            SdslvExpression::FieldAccess { Base, .. } => {
+                self.ValidateFlowBoardReads(flow, Base, board_fields);
+            }
+            SdslvExpression::Call { Callee, Arguments } => {
+                self.ValidateFlowBoardReads(flow, Callee, board_fields);
+                for argument in Arguments {
+                    self.ValidateFlowBoardReads(flow, argument, board_fields);
+                }
+            }
+            SdslvExpression::Binary { Left, Right, .. } => {
+                self.ValidateFlowBoardReads(flow, Left, board_fields);
+                self.ValidateFlowBoardReads(flow, Right, board_fields);
+            }
+            SdslvExpression::Unary { Operand, .. } => {
+                self.ValidateFlowBoardReads(flow, Operand, board_fields);
+            }
+            _ => {}
+        }
+    }
+
+    fn TryGetBoardFieldRead(expression: &SdslvExpression) -> Option<String> {
+        let SdslvExpression::FieldAccess { Base, Field } = expression else {
+            return None;
+        };
+        let SdslvExpression::Identifier(base_name) = &**Base else {
+            return None;
+        };
+        if base_name == "board" {
+            return Some(Field.clone());
+        }
+        None
+    }
+    fn ResolveFlowExpressionType(
+        &self,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+    ) -> TypeRef {
+        match expression {
+            SdslvExpression::Identifier(name) => {
+                locals.get(name).cloned().unwrap_or(TypeRef::Unknown)
+            }
+            SdslvExpression::IntegerLiteral(_) => TypeRef::Named("i32".to_string()),
+            SdslvExpression::FloatLiteral(_) => TypeRef::Named("float".to_string()),
+            SdslvExpression::StringLiteral(_) => TypeRef::Named("string".to_string()),
+            SdslvExpression::BoolLiteral(_) => TypeRef::Named("bool".to_string()),
+            SdslvExpression::FieldAccess { Base, Field } => {
+                if let SdslvExpression::Identifier(base_name) = &**Base
+                    && base_name == "board"
+                {
+                    return locals
+                        .get(&format!("board.{}", Field))
+                        .cloned()
+                        .unwrap_or(TypeRef::Unknown);
+                }
+                TypeRef::Unknown
+            }
+            SdslvExpression::Binary {
+                Left,
+                Operator,
+                Right,
+            } => {
+                let left = self.ResolveFlowExpressionType(locals, Left);
+                let right = self.ResolveFlowExpressionType(locals, Right);
+                match Operator {
+                    SdslvBinaryOperator::Equal
+                    | SdslvBinaryOperator::NotEqual
+                    | SdslvBinaryOperator::Less
+                    | SdslvBinaryOperator::LessEqual
+                    | SdslvBinaryOperator::Greater
+                    | SdslvBinaryOperator::GreaterEqual => {
+                        if self.AreCompatible(&left, &right) {
+                            TypeRef::Named("bool".to_string())
+                        } else {
+                            TypeRef::Unknown
+                        }
+                    }
+                    _ => {
+                        if self.AreCompatible(&left, &right) {
+                            left
+                        } else {
+                            TypeRef::Unknown
+                        }
+                    }
+                }
+            }
+            SdslvExpression::Unary { Operand, .. } => {
+                self.ResolveFlowExpressionType(locals, Operand)
+            }
+            SdslvExpression::Call { .. } => TypeRef::Unknown,
+            SdslvExpression::With { Base, .. } => self.ResolveFlowExpressionType(locals, Base),
+            SdslvExpression::Index { Base, .. } => self.ResolveFlowExpressionType(locals, Base),
+            SdslvExpression::ArrayLiteral { .. } => TypeRef::Unknown,
+            SdslvExpression::Switch { .. } => TypeRef::Unknown,
+            SdslvExpression::Match { .. } => TypeRef::Unknown,
+            SdslvExpression::WhenUtility { .. } => TypeRef::Unknown,
+            SdslvExpression::TryPropagate { Expression, .. }
+            | SdslvExpression::Unwrap { Expression, .. } => {
+                self.ResolveFlowExpressionType(locals, Expression)
+            }
+        }
+    }
+    fn ValidateFlowGoto(
+        &mut self,
+        flow: &SdslvFlowDecl,
+        path: &SdslvPath,
+        state_names: &HashSet<String>,
+    ) {
+        let target = path.Segments.join(".");
+        if !state_names.contains(&target) {
+            self.Err(&format!(
+                "goto targets unknown state '{}' in flow '{}'",
+                target, flow.Name
+            ));
+        }
+    }
+
+    fn ValidateFunctionBody(&mut self, shader: &SdslvShaderDecl, function: &SdslvFunctionDecl) {
+        let Some(body) = &function.Body else {
+            return;
+        };
+        self.ValidateTypeRefKnown(
+            &function.ReturnType,
+            &format!(
+                "unknown return type '{}' in {}",
+                function.ReturnType.ToDisplayString(),
+                function.Name
+            ),
+            &shader.GenericParameters,
+        );
+        let mut locals = HashMap::new();
+        let mut parameter_types = HashMap::new();
+        for parameter in &function.Parameters {
+            self.ValidateTypeRefKnown(
+                &parameter.TypeName,
+                &format!(
+                    "unknown type '{}' in parameter '{}' of {}",
+                    parameter.TypeName.ToDisplayString(),
+                    parameter.Name,
+                    function.Name
+                ),
+                &shader.GenericParameters,
+            );
+            let parameter_type = self.TypeRefToType(&parameter.TypeName);
+            locals.insert(parameter.Name.clone(), parameter_type.clone());
+            parameter_types.insert(parameter.Name.clone(), parameter_type);
+        }
+        let return_type = self.TypeRefToType(&function.ReturnType);
+        let is_fallible_fn = function.ErrorType.is_some();
+        if let Some(error_type) = &function.ErrorType
+            && error_type.ToDisplayString() != "Error"
+        {
+            self.Err("only Error is supported as fallible error type in SDSL-V M58");
+        }
+        if function.Stage.is_some() && is_fallible_fn {
+            self.Err("stage functions cannot be fallible in SDSL-V M58");
+        }
+
+        self.ValidateStatements(
+            shader,
+            function,
+            &body.Statements,
+            &mut locals,
+            &parameter_types,
+            &return_type,
+            is_fallible_fn,
+        );
+    }
+
+    fn ValidateStatements(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        function: &SdslvFunctionDecl,
+        statements: &[SdslvStatement],
+        locals: &mut HashMap<String, TypeRef>,
+        parameter_types: &HashMap<String, TypeRef>,
+        return_type: &TypeRef,
+        is_fallible_fn: bool,
+    ) {
+        for statement in statements {
+            match statement {
+                SdslvStatement::Let {
+                    Name,
+                    TypeName,
+                    Initializer,
+                } => {
+                    if let Some(init) = Initializer {
+                        self.CheckExpressionCalls(shader, locals, init, is_fallible_fn, false);
+                        if self.IsFallibleExpression(shader, locals, init) {
+                            self.Err("fallible expression must be handled with ? or !");
+                        }
+                        let actual = self.ResolveExpressionType(shader, locals, init);
+                        let expected = self.TypeRefToType(TypeName);
+                        if let Some(msg) = self.TypeMismatch("type mismatch", &expected, &actual) {
+                            self.Err(&format!("{}: expected {}, found {}", msg.0, msg.1, msg.2));
+                        }
+                        self.ValidateArrayLiteralAgainstExpectedType(
+                            shader, locals, init, &expected,
+                        );
+                        self.ValidateSwitchExpression(shader, locals, init);
+                        self.ValidateMatchExpression(shader, locals, init);
+                        self.ValidateWhenUtilityExpression(shader, locals, init);
+                        locals.insert(Name.clone(), expected);
+                    } else {
+                        self.ValidateTypeRefKnown(
+                            TypeName,
+                            &format!(
+                                "unknown type '{}' in local '{}'",
+                                TypeName.ToDisplayString(),
+                                Name
+                            ),
+                            &shader.GenericParameters,
+                        );
+                        locals.insert(Name.clone(), self.TypeRefToType(TypeName));
+                    }
+                }
+                SdslvStatement::Assign { Target, Value } => {
+                    self.CheckExpressionCalls(shader, locals, Target, is_fallible_fn, false);
+                    self.CheckExpressionCalls(shader, locals, Value, is_fallible_fn, false);
+                    if self.IsFallibleExpression(shader, locals, Target) {
+                        self.Err("fallible expression must be handled with ? or !");
+                    }
+                    if self.IsFallibleExpression(shader, locals, Value) {
+                        self.Err("fallible expression must be handled with ? or !");
+                    }
+                    self.ValidateImmutableAggregateParameterAssignment(parameter_types, Target);
+                    let expected = self.ResolveAssignmentTargetType(shader, locals, Target);
+                    let actual = self.ResolveExpressionType(shader, locals, Value);
+                    let mismatch_label = if matches!(Target, SdslvExpression::Index { .. }) {
+                        "array element assignment type mismatch"
+                    } else {
+                        "assignment type mismatch"
+                    };
+                    if let Some(msg) = self.TypeMismatch(mismatch_label, &expected, &actual) {
+                        self.Err(&format!("{}: expected {}, found {}", msg.0, msg.1, msg.2));
+                    }
+                    self.ValidateArrayLiteralAgainstExpectedType(shader, locals, Value, &expected);
+                    self.ValidateSwitchExpression(shader, locals, Value);
+                    self.ValidateMatchExpression(shader, locals, Value);
+                    self.ValidateWhenUtilityExpression(shader, locals, Value);
+                }
+                SdslvStatement::Return { Value } => {
+                    self.CheckExpressionCalls(shader, locals, Value, is_fallible_fn, true);
+                    if self.IsFallibleExpression(shader, locals, Value) {
+                        self.Err("fallible expression must be handled with ? or !");
+                    }
+                    if is_fallible_fn
+                        && matches!(
+                            Value,
+                            SdslvExpression::Call { Callee, .. }
+                                if matches!(Callee.as_ref(), SdslvExpression::Identifier(name) if name == "error")
+                        )
+                    {
+                        continue;
+                    }
+                    let actual = self.ResolveExpressionType(shader, locals, Value);
+                    if let Some(msg) = self.TypeMismatch(
+                        &format!("return type mismatch in {}", function.Name),
+                        return_type,
+                        &actual,
+                    ) {
+                        self.Err(&format!("{}: expected {}, found {}", msg.0, msg.1, msg.2));
+                    }
+                    self.ValidateSwitchExpression(shader, locals, Value);
+                    self.ValidateMatchExpression(shader, locals, Value);
+                    self.ValidateWhenUtilityExpression(shader, locals, Value);
+                }
+                SdslvStatement::Expression { Value } => {
+                    self.CheckExpressionCalls(shader, locals, Value, is_fallible_fn, false);
+                    if self.IsFallibleExpression(shader, locals, Value) {
+                        self.Err("fallible expression must be handled with ? or !");
+                    }
+                    self.ValidateSwitchExpression(shader, locals, Value);
+                    self.ValidateMatchExpression(shader, locals, Value);
+                    self.ValidateWhenUtilityExpression(shader, locals, Value);
+                }
+                SdslvStatement::Empty => {}
+                SdslvStatement::If {
+                    Condition,
+                    ThenBody,
+                    ElseBody,
+                    ..
+                } => {
+                    self.CheckExpressionCalls(shader, locals, Condition, is_fallible_fn, false);
+                    if self.IsFallibleExpression(shader, locals, Condition) {
+                        self.Err("fallible expression must be handled with ? or !");
+                    }
+                    let condition_type = self.ResolveExpressionType(shader, locals, Condition);
+                    if condition_type != TypeRef::Unknown
+                        && condition_type != TypeRef::Named("bool".to_string())
+                    {
+                        self.Err(&format!(
+                            "if condition must be bool; found {}",
+                            self.TypeName(&condition_type)
+                        ));
+                    }
+                    self.ValidateStatements(
+                        shader,
+                        function,
+                        ThenBody,
+                        locals,
+                        parameter_types,
+                        return_type,
+                        is_fallible_fn,
+                    );
+                    if let Some(else_body) = ElseBody {
+                        if else_body.len() == 1 && matches!(else_body[0], SdslvStatement::If { .. })
+                        {
+                            self.Err("nested decision ladder is not allowed; use switch { case ... else ... }");
+                        }
+                        self.ValidateStatements(
+                            shader,
+                            function,
+                            else_body,
+                            locals,
+                            parameter_types,
+                            return_type,
+                            is_fallible_fn,
+                        );
+                    }
+                }
+                SdslvStatement::For {
+                    Iterator,
+                    Start,
+                    End,
+                    Step,
+                    Body,
+                    ..
+                } => {
+                    self.CheckExpressionCalls(shader, locals, Start, is_fallible_fn, false);
+                    self.CheckExpressionCalls(shader, locals, End, is_fallible_fn, false);
+                    if self.IsFallibleExpression(shader, locals, Start) {
+                        self.Err("fallible expression must be handled with ? or !");
+                    }
+                    if self.IsFallibleExpression(shader, locals, End) {
+                        self.Err("fallible expression must be handled with ? or !");
+                    }
+                    let start_type = self.ResolveExpressionType(shader, locals, Start);
+                    let end_type = self.ResolveExpressionType(shader, locals, End);
+                    if !self.IsIntegerType(&start_type) && start_type != TypeRef::Unknown {
+                        self.Err(&format!(
+                            "for loop start bound must be integer; found {}",
+                            self.TypeName(&start_type)
+                        ));
+                    }
+                    if !self.IsIntegerType(&end_type) && end_type != TypeRef::Unknown {
+                        self.Err(&format!(
+                            "for loop end bound must be integer; found {}",
+                            self.TypeName(&end_type)
+                        ));
+                    }
+                    if let Some(step_expr) = Step {
+                        self.CheckExpressionCalls(shader, locals, step_expr, is_fallible_fn, false);
+                        if self.IsFallibleExpression(shader, locals, step_expr) {
+                            self.Err("fallible expression must be handled with ? or !");
+                        }
+                        let step_type = self.ResolveExpressionType(shader, locals, step_expr);
+                        if !self.IsIntegerType(&step_type) && step_type != TypeRef::Unknown {
+                            self.Err(&format!(
+                                "for loop step must be integer; found {}",
+                                self.TypeName(&step_type)
+                            ));
+                        }
+                        if self.IsKnownNonPositiveInteger(step_expr) {
+                            self.Err("for loop step must be greater than zero");
+                        }
+                    }
+                    let mut nested_locals = locals.clone();
+                    nested_locals.insert(
+                        Iterator.clone(),
+                        self.InferLoopIteratorType(&start_type, &end_type),
+                    );
+                    self.ValidateStatements(
+                        shader,
+                        function,
+                        Body,
+                        &mut nested_locals,
+                        parameter_types,
+                        return_type,
+                        is_fallible_fn,
+                    );
+                }
+            }
+        }
+    }
+
+    fn IsIntegerType(&self, ty: &TypeRef) -> bool {
+        let Some(name) = ty.Name() else { return false };
+        matches!(self.ResolveUnderlyingName(name).as_str(), "i32" | "u32")
+    }
+
+    fn InferLoopIteratorType(&self, start: &TypeRef, end: &TypeRef) -> TypeRef {
+        let Some(start_name) = start.Name() else {
+            return TypeRef::Named("i32".to_string());
+        };
+        let Some(end_name) = end.Name() else {
+            return TypeRef::Named("i32".to_string());
+        };
+        let start_under = self.ResolveUnderlyingName(start_name);
+        let end_under = self.ResolveUnderlyingName(end_name);
+        if start_under == "u32" && end_under == "u32" {
+            TypeRef::Named("u32".to_string())
+        } else {
+            TypeRef::Named("i32".to_string())
+        }
+    }
+
+    fn IsKnownNonPositiveInteger(&self, expr: &SdslvExpression) -> bool {
+        match expr {
+            SdslvExpression::IntegerLiteral(raw) => {
+                raw.parse::<i64>().map(|v| v <= 0).unwrap_or(false)
+            }
+            SdslvExpression::Unary {
+                Operator: SdslvUnaryOperator::Negate,
+                Operand,
+            } => matches!(Operand.as_ref(), SdslvExpression::IntegerLiteral(_)),
+            _ => false,
+        }
+    }
+
+    fn ValidateImmutableAggregateParameterAssignment(
+        &mut self,
+        parameter_types: &HashMap<String, TypeRef>,
+        target: &SdslvExpression,
+    ) {
+        if let Some(base_parameter_name) = Self::TryGetIndexAssignmentRootParameter(target) {
+            if let Some(TypeRef::Array { .. }) = parameter_types.get(&base_parameter_name) {
+                self.Err(&format!(
+                    "cannot assign to element of immutable array parameter '{}'",
+                    base_parameter_name
+                ));
+            }
+        }
+        let Some((base_parameter_name, target_field_name)) =
+            Self::TryGetFieldAssignmentRootParameter(target)
+        else {
+            return;
+        };
+        let Some(parameter_type) = parameter_types.get(&base_parameter_name) else {
+            return;
+        };
+        let Some(parameter_type_name) = parameter_type.Name() else {
+            return;
+        };
+        if self.StreamByName.contains_key(parameter_type_name) {
+            self.Err(&format!(
+                "cannot assign to field '{}' of immutable stream parameter '{}'; use with to create a modified copy",
+                target_field_name, base_parameter_name
+            ));
+            return;
+        }
+        if self.RecordByName.contains_key(parameter_type_name) {
+            self.Err(&format!(
+                "cannot assign to field '{}' of immutable record parameter '{}'; use with to create a modified copy",
+                target_field_name, base_parameter_name
+            ));
+        }
+    }
+
+    fn TryGetFieldAssignmentRootParameter(target: &SdslvExpression) -> Option<(String, String)> {
+        let SdslvExpression::FieldAccess { Base, Field } = target else {
+            return None;
+        };
+        let mut cursor = Base.as_ref();
+        while let SdslvExpression::FieldAccess { Base, .. } = cursor {
+            cursor = Base.as_ref();
+        }
+        let SdslvExpression::Identifier(root_name) = cursor else {
+            return None;
+        };
+        Some((root_name.clone(), Field.clone()))
+    }
+
+    fn TryGetIndexAssignmentRootParameter(target: &SdslvExpression) -> Option<String> {
+        let mut cursor = target;
+        loop {
+            match cursor {
+                SdslvExpression::Index { Base, .. } => {
+                    cursor = Base.as_ref();
+                }
+                SdslvExpression::FieldAccess { Base, .. } => {
+                    cursor = Base.as_ref();
+                }
+                SdslvExpression::Identifier(root_name) => return Some(root_name.clone()),
+                _ => return None,
+            }
+        }
+    }
+
+    fn ResolveAssignmentTargetType(
+        &self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+    ) -> TypeRef {
+        self.ResolveExpressionType(shader, locals, expression)
+    }
+
+    fn CheckExpressionCalls(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+        is_fallible_fn: bool,
+        allow_error_return: bool,
+    ) {
+        match expression {
+            SdslvExpression::Call { Callee, Arguments } => {
+                if let SdslvExpression::Identifier(name) = &**Callee
+                    && name == "error"
+                {
+                    if !allow_error_return {
+                        self.Err(
+                            "error(...) is only valid in fallible return position in SDSL-V M58",
+                        );
+                    } else if !is_fallible_fn {
+                        self.Err("error(...) can only be returned from a fallible function in SDSL-V M58");
+                    }
+                    return;
+                }
+                if let SdslvExpression::Identifier(name) = &**Callee {
+                    self.ValidateBuiltinConstructorCall(shader, locals, name, Arguments);
+                }
+                if let SdslvExpression::Identifier(name) = &**Callee
+                    && let Some(signature) = self.FunctionSignatures.get(name).cloned()
+                {
+                    for (index, argument) in Arguments.iter().enumerate() {
+                        if index >= signature.Parameters.len() {
+                            break;
+                        }
+                        let actual = self.ResolveExpressionType(shader, locals, argument);
+                        if let Some((_, expected_name, actual_name)) =
+                            self.TypeMismatch("", &signature.Parameters[index], &actual)
+                        {
+                            self.Err(&format!(
+                                "argument {} of {} expects {}, found {}",
+                                index + 1,
+                                signature.Name,
+                                expected_name,
+                                actual_name
+                            ));
+                        }
+                    }
+                }
+                for argument in Arguments {
+                    self.CheckExpressionCalls(shader, locals, argument, is_fallible_fn, false);
+                }
+            }
+            SdslvExpression::ArrayLiteral { Elements, .. } => {
+                for element in Elements {
+                    self.CheckExpressionCalls(shader, locals, element, is_fallible_fn, false);
+                }
+            }
+            SdslvExpression::FieldAccess { Base, Field } => {
+                self.CheckExpressionCalls(shader, locals, Base, is_fallible_fn, false);
+                if let SdslvExpression::Identifier(name) = Base.as_ref() {
+                    if let Some(enum_decl) = self.EnumByName.get(name) {
+                        if !enum_decl.Variants.iter().any(|x| x.Name == *Field) {
+                            self.Err(&format!("unknown variant '{}' for enum '{}'", Field, name));
+                        }
+                    } else if !locals.contains_key(name)
+                        && name
+                            .chars()
+                            .next()
+                            .map(|c| c.is_uppercase())
+                            .unwrap_or(false)
+                    {
+                        self.Err(&format!("unknown enum '{}'", name));
+                    }
+                }
+            }
+            SdslvExpression::Index { Base, Index, .. } => {
+                self.CheckExpressionCalls(shader, locals, Base, is_fallible_fn, false);
+                self.CheckExpressionCalls(shader, locals, Index, is_fallible_fn, false);
+                let base_type = self.ResolveExpressionType(shader, locals, Base);
+                let index_type = self.ResolveExpressionType(shader, locals, Index);
+                if !matches!(base_type, TypeRef::Array { .. }) && base_type != TypeRef::Unknown {
+                    self.Err(&format!(
+                        "indexing requires array type; found {}",
+                        self.TypeName(&base_type)
+                    ));
+                }
+                if !self.IsIntegerType(&index_type) && index_type != TypeRef::Unknown {
+                    self.Err(&format!(
+                        "array index must be integer; found {}",
+                        self.TypeName(&index_type)
+                    ));
+                }
+            }
+            SdslvExpression::Binary { Left, Right, .. } => {
+                self.CheckExpressionCalls(shader, locals, Left, is_fallible_fn, false);
+                self.CheckExpressionCalls(shader, locals, Right, is_fallible_fn, false);
+            }
+            SdslvExpression::Unary { Operand, .. } => {
+                self.CheckExpressionCalls(shader, locals, Operand, is_fallible_fn, false)
+            }
+            SdslvExpression::TryPropagate { Expression, .. } => {
+                self.CheckExpressionCalls(shader, locals, Expression, is_fallible_fn, false);
+                if !is_fallible_fn {
+                    self.Err("? can only be used inside a fallible function");
+                }
+                if !self.IsFallibleExpression(shader, locals, Expression) {
+                    self.Err("? requires a fallible expression");
+                }
+            }
+            SdslvExpression::Unwrap { Expression, .. } => {
+                self.CheckExpressionCalls(shader, locals, Expression, is_fallible_fn, false);
+                if !self.IsFallibleExpression(shader, locals, Expression) {
+                    self.Err("! unwrap requires a fallible expression");
+                }
+            }
+            SdslvExpression::With { Base, Updates } => {
+                self.CheckExpressionCalls(shader, locals, Base, is_fallible_fn, false);
+                self.ValidateWithExpression(shader, locals, Base, Updates);
+                for update in Updates {
+                    self.CheckExpressionCalls(shader, locals, &update.Value, is_fallible_fn, false);
+                }
+            }
+            SdslvExpression::Switch {
+                Cases, ElseValue, ..
+            } => {
+                for case in Cases {
+                    self.CheckExpressionCalls(
+                        shader,
+                        locals,
+                        &case.Condition,
+                        is_fallible_fn,
+                        false,
+                    );
+                    self.CheckExpressionCalls(shader, locals, &case.Value, is_fallible_fn, false);
+                }
+                self.CheckExpressionCalls(shader, locals, ElseValue, is_fallible_fn, false);
+            }
+            SdslvExpression::Match { Subject, Arms, .. } => {
+                self.CheckExpressionCalls(shader, locals, Subject, is_fallible_fn, false);
+                for arm in Arms {
+                    self.CheckExpressionCalls(shader, locals, &arm.Value, is_fallible_fn, false);
+                }
+            }
+            SdslvExpression::WhenUtility {
+                Options,
+                Cases,
+                ElseValue,
+                ..
+            } => {
+                if let Some(options) = Options {
+                    if let Some(hysteresis) = &options.Hysteresis {
+                        self.CheckExpressionCalls(
+                            shader,
+                            locals,
+                            hysteresis,
+                            is_fallible_fn,
+                            false,
+                        );
+                    }
+                    if let Some(min_commit) = &options.MinCommit {
+                        self.CheckExpressionCalls(
+                            shader,
+                            locals,
+                            min_commit,
+                            is_fallible_fn,
+                            false,
+                        );
+                    }
+                }
+                for case in Cases {
+                    self.CheckExpressionCalls(shader, locals, &case.Value, is_fallible_fn, false);
+                    self.CheckExpressionCalls(shader, locals, &case.Guard, is_fallible_fn, false);
+                    self.CheckExpressionCalls(shader, locals, &case.Score, is_fallible_fn, false);
+                }
+                self.CheckExpressionCalls(shader, locals, ElseValue, is_fallible_fn, false);
+            }
+            _ => {}
+        }
+    }
+
+    fn ResolveExpressionType(
+        &self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+    ) -> TypeRef {
+        match expression {
+            SdslvExpression::Identifier(name) => {
+                if let Some(local) = locals.get(name) {
+                    return local.clone();
+                }
+                if let Some(materials) = self.MaterialFieldsByShader.get(&shader.Name)
+                    && let Some(t) = materials.get(name)
+                {
+                    return TypeRef::Named(t.clone());
+                }
+                TypeRef::Unknown
+            }
+            SdslvExpression::IntegerLiteral(_) => TypeRef::Named("i32".to_string()),
+            SdslvExpression::FloatLiteral(_) => TypeRef::Named("float".to_string()),
+            SdslvExpression::StringLiteral(_) => TypeRef::Named("string".to_string()),
+            SdslvExpression::BoolLiteral(_) => TypeRef::Named("bool".to_string()),
+            SdslvExpression::ArrayLiteral { .. } => TypeRef::Unknown,
+            SdslvExpression::FieldAccess { Base, Field } => {
+                if let SdslvExpression::Identifier(enum_name) = Base.as_ref() {
+                    if let Some(enum_decl) = self.EnumByName.get(enum_name) {
+                        if enum_decl.Variants.iter().any(|x| x.Name == *Field) {
+                            return TypeRef::Named(enum_name.clone());
+                        }
+                    }
+                }
+                let base_type = self.ResolveExpressionType(shader, locals, Base);
+                self.ResolveFieldType(&base_type, Field)
+            }
+            SdslvExpression::Call { Callee, Arguments } => {
+                self.ResolveCallType(shader, locals, Callee, Arguments)
+            }
+            SdslvExpression::Index { Base, Index, .. } => {
+                let base_type = self.ResolveExpressionType(shader, locals, Base);
+                let index_type = self.ResolveExpressionType(shader, locals, Index);
+                if !self.IsIntegerType(&index_type) && index_type != TypeRef::Unknown {
+                    return TypeRef::Unknown;
+                }
+                match base_type {
+                    TypeRef::Array { Element, .. } => *Element,
+                    _ => TypeRef::Unknown,
+                }
+            }
+            SdslvExpression::Binary {
+                Left,
+                Operator,
+                Right,
+            } => {
+                let l = self.ResolveExpressionType(shader, locals, Left);
+                let r = self.ResolveExpressionType(shader, locals, Right);
+                match Operator {
+                    SdslvBinaryOperator::Equal
+                    | SdslvBinaryOperator::NotEqual
+                    | SdslvBinaryOperator::Less
+                    | SdslvBinaryOperator::LessEqual
+                    | SdslvBinaryOperator::Greater
+                    | SdslvBinaryOperator::GreaterEqual => {
+                        if self.AreCompatible(&l, &r) {
+                            TypeRef::Named("bool".to_string())
+                        } else {
+                            TypeRef::Unknown
+                        }
+                    }
+                    _ => {
+                        if self.AreCompatible(&l, &r) {
+                            l
+                        } else {
+                            TypeRef::Unknown
+                        }
+                    }
+                }
+            }
+            SdslvExpression::Unary { Operand, .. } => {
+                self.ResolveExpressionType(shader, locals, Operand)
+            }
+            SdslvExpression::With { Base, .. } => self.ResolveExpressionType(shader, locals, Base),
+            SdslvExpression::TryPropagate { Expression, .. }
+            | SdslvExpression::Unwrap { Expression, .. } => {
+                self.ResolveExpressionType(shader, locals, Expression)
+            }
+            SdslvExpression::Switch {
+                Cases, ElseValue, ..
+            } => {
+                let mut current = self.ResolveExpressionType(shader, locals, ElseValue);
+                for case in Cases {
+                    let case_type = self.ResolveExpressionType(shader, locals, &case.Value);
+                    if self.AreCompatible(&current, &case_type) {
+                        if current == TypeRef::Unknown {
+                            current = case_type;
+                        }
+                    } else if current == TypeRef::Unknown {
+                        current = case_type;
+                    } else if case_type != TypeRef::Unknown {
+                        return TypeRef::Unknown;
+                    }
+                }
+                current
+            }
+            SdslvExpression::Match { Subject, Arms, .. } => {
+                let Some(first) = Arms.first() else {
+                    return TypeRef::Unknown;
+                };
+                let subject_type = self.ResolveExpressionType(shader, locals, Subject);
+                let mut current = self.ResolveMatchArmType(shader, locals, &subject_type, first);
+                for arm in Arms.iter().skip(1) {
+                    let arm_type = self.ResolveMatchArmType(shader, locals, &subject_type, arm);
+                    if self.AreCompatible(&current, &arm_type) {
+                        if current == TypeRef::Unknown {
+                            current = arm_type;
+                        }
+                    } else if current == TypeRef::Unknown {
+                        current = arm_type;
+                    } else if arm_type != TypeRef::Unknown {
+                        return TypeRef::Unknown;
+                    }
+                }
+                current
+            }
+            SdslvExpression::WhenUtility {
+                Cases, ElseValue, ..
+            } => {
+                let mut current = self.ResolveExpressionType(shader, locals, ElseValue);
+                for case in Cases {
+                    let case_type = self.ResolveExpressionType(shader, locals, &case.Value);
+                    if self.AreCompatible(&current, &case_type) {
+                        if current == TypeRef::Unknown {
+                            current = case_type;
+                        }
+                    } else if current == TypeRef::Unknown {
+                        current = case_type;
+                    } else if case_type != TypeRef::Unknown {
+                        return TypeRef::Unknown;
+                    }
+                }
+                current
+            }
+        }
+    }
+
+    fn ResolveMatchArmType(
+        &self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        subject_type: &TypeRef,
+        arm: &SdslvMatchArm,
+    ) -> TypeRef {
+        let mut arm_locals = locals.clone();
+        if self.IsFallibleTypeContext(subject_type, arm) {
+            let ok_type = subject_type.clone();
+            let err_type = TypeRef::Named("Error".to_string());
+            match &arm.Kind {
+                SdslvMatchArmKind::FallibleOk { Binding } if Binding != "_" => {
+                    arm_locals.insert(Binding.clone(), ok_type);
+                }
+                SdslvMatchArmKind::FallibleErr { Binding } if Binding != "_" => {
+                    arm_locals.insert(Binding.clone(), err_type);
+                }
+                _ => {}
+            }
+        }
+        self.ResolveExpressionType(shader, &arm_locals, &arm.Value)
+    }
+
+    fn IsFallibleTypeContext(&self, subject_type: &TypeRef, arm: &SdslvMatchArm) -> bool {
+        subject_type != &TypeRef::Unknown
+            && matches!(
+                arm.Kind,
+                SdslvMatchArmKind::FallibleOk { .. } | SdslvMatchArmKind::FallibleErr { .. }
+            )
+    }
+
+    fn ValidateSwitchExpression(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+    ) {
+        let SdslvExpression::Switch {
+            Subject,
+            Cases,
+            ElseValue,
+            ..
+        } = expression
+        else {
+            return;
+        };
+        if Cases.is_empty() {
+            self.Err("switch must contain at least one case");
+            return;
+        }
+        let mut expected_type = self.ResolveExpressionType(shader, locals, ElseValue);
+        let subject_type = Subject
+            .as_ref()
+            .map(|s| self.ResolveExpressionType(shader, locals, s));
+        for case in Cases {
+            let condition_type = self.ResolveExpressionType(shader, locals, &case.Condition);
+            if let Some(subject_type) = &subject_type {
+                if *subject_type != TypeRef::Unknown {
+                    if let Some((_, expected_name, actual_name)) =
+                        self.TypeMismatch("", subject_type, &condition_type)
+                    {
+                        self.Err(&format!(
+                            "switch case type mismatch: expected {}, found {}",
+                            expected_name, actual_name
+                        ));
+                    }
+                }
+            } else if condition_type != TypeRef::Unknown
+                && condition_type != TypeRef::Named("bool".to_string())
+            {
+                self.Err(&format!(
+                    "switch case condition must be bool; found {}",
+                    self.TypeName(&condition_type)
+                ));
+            }
+            let value_type = self.ResolveExpressionType(shader, locals, &case.Value);
+            if expected_type == TypeRef::Unknown {
+                expected_type = value_type;
+                continue;
+            }
+            if let Some((_, expected_name, actual_name)) =
+                self.TypeMismatch("", &expected_type, &value_type)
+            {
+                self.Err(&format!(
+                    "switch arm type mismatch: expected {}, found {}",
+                    expected_name, actual_name
+                ));
+            }
+        }
+    }
+
+    fn ValidateMatchExpression(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+    ) {
+        let SdslvExpression::Match { Subject, Arms, .. } = expression else {
+            return;
+        };
+        let subject_type = self.ResolveExpressionType(shader, locals, Subject);
+        if Arms.iter().any(|arm| {
+            matches!(
+                arm.Kind,
+                SdslvMatchArmKind::FallibleOk { .. } | SdslvMatchArmKind::FallibleErr { .. }
+            )
+        }) {
+            self.ValidateFallibleMatchExpression(shader, locals, Subject, &subject_type, Arms);
+            return;
+        }
+        let Some(subject_name) = subject_type.Name() else {
+            return;
+        };
+        let Some(subject_enum) = self.EnumByName.get(subject_name) else {
+            if subject_type != TypeRef::Unknown {
+                self.Err(&format!(
+                    "match subject must be enum type; found {}",
+                    self.TypeName(&subject_type)
+                ));
+            }
+            return;
+        };
+        let subject_variants: Vec<String> = subject_enum
+            .Variants
+            .iter()
+            .map(|x| x.Name.clone())
+            .collect();
+        let mut seen = HashSet::new();
+        let mut expected_arm_type: Option<TypeRef> = None;
+        for arm in Arms {
+            let SdslvMatchArmKind::EnumVariant { VariantPath } = &arm.Kind else {
+                self.Err("fallible match cannot mix ok/err arms with enum variant arms");
+                continue;
+            };
+            if VariantPath.Segments.len() != 2 {
+                self.Err("enum variant reference must be qualified as Enum.Variant");
+                continue;
+            }
+            let enum_name = &VariantPath.Segments[0];
+            let variant_name = &VariantPath.Segments[1];
+            if enum_name != subject_name {
+                self.Err(&format!(
+                    "match arm variant '{}.{}' does not belong to enum '{}'",
+                    enum_name, variant_name, subject_name
+                ));
+                continue;
+            }
+            if !subject_variants.iter().any(|x| x == variant_name) {
+                self.Err(&format!(
+                    "unknown variant '{}' for enum '{}'",
+                    variant_name, subject_name
+                ));
+                continue;
+            }
+            if !seen.insert(variant_name.clone()) {
+                self.Err(&format!(
+                    "duplicate match arm for variant {}.{}",
+                    subject_name, variant_name
+                ));
+            }
+            let arm_type = self.ResolveExpressionType(shader, locals, &arm.Value);
+            if let Some(expected) = &expected_arm_type {
+                if let Some((_, expected_name, found_name)) =
+                    self.TypeMismatch("", expected, &arm_type)
+                {
+                    self.Err(&format!(
+                        "match arm type mismatch: expected {}, found {}",
+                        expected_name, found_name
+                    ));
+                }
+            } else {
+                expected_arm_type = Some(arm_type);
+            }
+        }
+        for variant_name in &subject_variants {
+            if !seen.contains(variant_name) {
+                self.Err(&format!(
+                    "match over enum {} is missing variant {}",
+                    subject_name, variant_name
+                ));
+                break;
+            }
+        }
+    }
+    fn ValidateWhenUtilityExpression(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+    ) {
+        let SdslvExpression::WhenUtility {
+            Options,
+            Cases,
+            ElseValue,
+            ..
+        } = expression
+        else {
+            return;
+        };
+        if Cases.is_empty() {
+            self.Err("when utility must contain at least one case");
+            return;
+        }
+        let mut expected_type = self.ResolveExpressionType(shader, locals, ElseValue);
+        for case in Cases {
+            let guard_type = self.ResolveExpressionType(shader, locals, &case.Guard);
+            if guard_type != TypeRef::Unknown && guard_type != TypeRef::Named("bool".to_string()) {
+                self.Err(&format!(
+                    "when utility guard must be bool; found {}",
+                    self.TypeName(&guard_type)
+                ));
+            }
+            let score_type = self.ResolveExpressionType(shader, locals, &case.Score);
+            if score_type != TypeRef::Unknown && !self.IsNumericScalarType(&score_type) {
+                self.Err(&format!(
+                    "when utility score must be numeric scalar; found {}",
+                    self.TypeName(&score_type)
+                ));
+            }
+            let value_type = self.ResolveExpressionType(shader, locals, &case.Value);
+            if expected_type == TypeRef::Unknown {
+                expected_type = value_type;
+            } else if let Some((_, expected_name, found_name)) =
+                self.TypeMismatch("", &expected_type, &value_type)
+            {
+                self.Err(&format!(
+                    "when utility result type mismatch: expected {}, found {}",
+                    expected_name, found_name
+                ));
+            }
+        }
+        if let Some(options) = Options {
+            if let Some(hysteresis) = &options.Hysteresis {
+                let t = self.ResolveExpressionType(shader, locals, hysteresis);
+                if t != TypeRef::Unknown && !self.IsNumericScalarType(&t) {
+                    self.Err(&format!(
+                        "when utility option 'hysteresis' must be numeric scalar; found {}",
+                        self.TypeName(&t)
+                    ));
+                }
+            }
+            if let Some(min_commit) = &options.MinCommit {
+                let t = self.ResolveExpressionType(shader, locals, min_commit);
+                if t != TypeRef::Unknown && !self.IsIntegerType(&t) {
+                    self.Err(&format!(
+                        "when utility option 'min_commit' must be integer scalar; found {}",
+                        self.TypeName(&t)
+                    ));
+                }
+            }
+        }
+    }
+
+    fn ValidateFallibleMatchExpression(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        subject_expression: &SdslvExpression,
+        subject_type: &TypeRef,
+        arms: &[SdslvMatchArm],
+    ) {
+        if !self.IsFallibleExpression(shader, locals, subject_expression) {
+            self.Err("fallible match requires a fallible expression");
+            return;
+        }
+        let value_type = subject_type.clone();
+        let error_type = TypeRef::Named("Error".to_string());
+        let mut ok_seen = false;
+        let mut err_seen = false;
+        let mut expected_arm_type: Option<TypeRef> = None;
+        for arm in arms {
+            let mut arm_locals = locals.clone();
+            match &arm.Kind {
+                SdslvMatchArmKind::FallibleOk { Binding } => {
+                    if ok_seen {
+                        self.Err("duplicate ok arm in fallible match");
+                    }
+                    ok_seen = true;
+                    if Binding != "_" {
+                        arm_locals.insert(Binding.clone(), value_type.clone());
+                    }
+                }
+                SdslvMatchArmKind::FallibleErr { Binding } => {
+                    if err_seen {
+                        self.Err("duplicate err arm in fallible match");
+                    }
+                    err_seen = true;
+                    if Binding != "_" {
+                        arm_locals.insert(Binding.clone(), error_type.clone());
+                    }
+                }
+                SdslvMatchArmKind::EnumVariant { .. } => {
+                    self.Err("fallible match cannot mix ok/err arms with enum variant arms");
+                    continue;
+                }
+            }
+            let arm_type = self.ResolveExpressionType(shader, &arm_locals, &arm.Value);
+            if let Some(expected) = &expected_arm_type {
+                if let Some((_, expected_name, found_name)) =
+                    self.TypeMismatch("", expected, &arm_type)
+                {
+                    self.Err(&format!(
+                        "fallible match arm type mismatch: expected {}, found {}",
+                        expected_name, found_name
+                    ));
+                }
+            } else {
+                expected_arm_type = Some(arm_type);
+            }
+        }
+        if !ok_seen || !err_seen {
+            self.Err("fallible match requires both ok and err arms");
+        }
+    }
+
+    fn ValidateWithExpression(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        base: &SdslvExpression,
+        updates: &[SdslvWithUpdate],
+    ) {
+        let base_type = self.ResolveExpressionType(shader, locals, base);
+        let Some(base_name) = base_type.Name() else {
+            self.Err("with expression base must be record or stream type");
+            return;
+        };
+        let field_types: HashMap<String, TypeRef> =
+            if let Some(r) = self.RecordByName.get(base_name) {
+                r.Fields
+                    .iter()
+                    .map(|f| (f.Name.clone(), self.TypeRefToType(&f.TypeName)))
+                    .collect()
+            } else if let Some(s) = self.StreamByName.get(base_name) {
+                s.Fields
+                    .iter()
+                    .map(|f| (f.Name.clone(), self.TypeRefToType(&f.TypeName)))
+                    .collect()
+            } else {
+                HashMap::new()
+            };
+        if field_types.is_empty() {
+            self.Err("with expression base must be record or stream type");
+            return;
+        }
+        let mut seen = HashSet::new();
+        for update in updates {
+            if !seen.insert(update.Field.clone()) {
+                self.Err(&format!(
+                    "duplicate with field update '{}' in type '{}'",
+                    update.Field, base_name
+                ));
+                continue;
+            }
+            let expected = field_types.get(&update.Field).cloned();
+            let Some(expected_type) = expected else {
+                self.Err(&format!(
+                    "with field '{}' does not exist on type '{}'",
+                    update.Field, base_name
+                ));
+                continue;
+            };
+            let actual = self.ResolveExpressionType(shader, locals, &update.Value);
+            if let Some((_, expected_name, actual_name)) =
+                self.TypeMismatch("", &expected_type, &actual)
+            {
+                self.Err(&format!(
+                    "with field '{}' on type '{}' expects {}, found {}",
+                    update.Field, base_name, expected_name, actual_name
+                ));
+            }
+        }
+    }
+
+    fn ResolveCallType(
+        &self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        callee: &SdslvExpression,
+        arguments: &[SdslvExpression],
+    ) -> TypeRef {
+        let SdslvExpression::Identifier(callee_name) = callee else {
+            return TypeRef::Unknown;
+        };
+        if callee_name == "error" {
+            return TypeRef::Named("Error".to_string());
+        }
+        if Self::IsBuiltinCtor(callee_name) {
+            return TypeRef::Named(callee_name.clone());
+        }
+        let Some(signature) = self.FunctionSignatures.get(callee_name) else {
+            return TypeRef::Unknown;
+        };
+        if signature.Parameters.len() != arguments.len() {
+            return TypeRef::Unknown;
+        }
+        for (index, argument) in arguments.iter().enumerate() {
+            let actual = self.ResolveExpressionType(shader, locals, argument);
+            if let Some(msg) = self.TypeMismatch(
+                &format!(
+                    "argument {} of {} expects {}",
+                    index + 1,
+                    signature.Name,
+                    self.TypeName(&signature.Parameters[index])
+                ),
+                &signature.Parameters[index],
+                &actual,
+            ) {
+                let _ = msg;
+            }
+        }
+        signature.ReturnType.clone()
+    }
+
+    fn ValidateBuiltinConstructorCall(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        callee_name: &str,
+        arguments: &[SdslvExpression],
+    ) {
+        let Some(expected_arg_count) = Self::BuiltinConstructorArity(callee_name) else {
+            return;
+        };
+        if callee_name == "float4x4" {
+            if arguments.len() != expected_arg_count {
+                self.Err(&format!(
+                    "{} constructor expects {} scalar numeric arguments; found {}",
+                    callee_name,
+                    expected_arg_count,
+                    arguments.len()
+                ));
+                return;
+            }
+            for (index, argument) in arguments.iter().enumerate() {
+                let argument_type = self.ResolveExpressionType(shader, locals, argument);
+                if !self.IsNumericScalarType(&argument_type) && argument_type != TypeRef::Unknown {
+                    self.Err(&format!(
+                        "{} constructor argument {} must be numeric scalar; found {}",
+                        callee_name,
+                        index,
+                        self.TypeName(&argument_type)
+                    ));
+                }
+            }
+            return;
+        }
+
+        let mut component_count = 0usize;
+        for (index, argument) in arguments.iter().enumerate() {
+            let argument_type = self.ResolveExpressionType(shader, locals, argument);
+            let Some(width) = self.NumericVectorOrScalarWidth(&argument_type) else {
+                if argument_type != TypeRef::Unknown {
+                    self.Err(&format!(
+                        "{} constructor argument {} must be numeric scalar; found {}",
+                        callee_name,
+                        index,
+                        self.TypeName(&argument_type)
+                    ));
+                }
+                continue;
+            };
+            component_count += width;
+        }
+        if component_count != expected_arg_count {
+            self.Err(&format!(
+                "{} constructor expects {} scalar numeric arguments; found {}",
+                callee_name, expected_arg_count, component_count
+            ));
+        }
+    }
+
+    fn BuiltinConstructorArity(name: &str) -> Option<usize> {
+        match name {
+            "float2" => Some(2),
+            "float3" => Some(3),
+            "float4" => Some(4),
+            "float4x4" => Some(16),
+            _ => None,
+        }
+    }
+
+    fn NumericVectorOrScalarWidth(&self, ty: &TypeRef) -> Option<usize> {
+        let Some(name) = ty.Name() else {
+            return None;
+        };
+        match self.ResolveUnderlyingName(name).as_str() {
+            "float" | "i32" | "u32" => Some(1),
+            "float2" => Some(2),
+            "float3" => Some(3),
+            "float4" => Some(4),
+            _ => None,
+        }
+    }
+
+    fn IsNumericScalarType(&self, ty: &TypeRef) -> bool {
+        let Some(name) = ty.Name() else {
+            return false;
+        };
+        matches!(
+            self.ResolveUnderlyingName(name).as_str(),
+            "float" | "i32" | "u32"
+        )
+    }
+
+    fn IsFallibleExpression(
+        &self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+    ) -> bool {
+        match expression {
+            SdslvExpression::Call { Callee, Arguments } => {
+                let call_is_fallible = if let SdslvExpression::Identifier(name) = &**Callee
+                    && let Some(signature) = self.FunctionSignatures.get(name)
+                {
+                    signature.IsFallible
+                } else {
+                    false
+                };
+                call_is_fallible
+                    || self.IsFallibleExpression(shader, locals, Callee)
+                    || Arguments
+                        .iter()
+                        .any(|argument| self.IsFallibleExpression(shader, locals, argument))
+            }
+            SdslvExpression::TryPropagate { .. } | SdslvExpression::Unwrap { .. } => false,
+            SdslvExpression::ArrayLiteral { Elements, .. } => Elements
+                .iter()
+                .any(|element| self.IsFallibleExpression(shader, locals, element)),
+            SdslvExpression::Binary { Left, Right, .. } => {
+                self.IsFallibleExpression(shader, locals, Left)
+                    || self.IsFallibleExpression(shader, locals, Right)
+            }
+            SdslvExpression::Unary { Operand, .. } => {
+                self.IsFallibleExpression(shader, locals, Operand)
+            }
+            SdslvExpression::FieldAccess { Base, .. } => {
+                self.IsFallibleExpression(shader, locals, Base)
+            }
+            SdslvExpression::Index { Base, Index, .. } => {
+                self.IsFallibleExpression(shader, locals, Base)
+                    || self.IsFallibleExpression(shader, locals, Index)
+            }
+            SdslvExpression::With { Base, Updates } => {
+                self.IsFallibleExpression(shader, locals, Base)
+                    || Updates
+                        .iter()
+                        .any(|u| self.IsFallibleExpression(shader, locals, &u.Value))
+            }
+            SdslvExpression::Switch {
+                Cases, ElseValue, ..
+            } => {
+                Cases.iter().any(|c| {
+                    self.IsFallibleExpression(shader, locals, &c.Condition)
+                        || self.IsFallibleExpression(shader, locals, &c.Value)
+                }) || self.IsFallibleExpression(shader, locals, ElseValue)
+            }
+            SdslvExpression::Match { Subject, Arms, .. } => {
+                let has_fallible_arms = Arms.iter().any(|arm| {
+                    matches!(
+                        arm.Kind,
+                        SdslvMatchArmKind::FallibleOk { .. }
+                            | SdslvMatchArmKind::FallibleErr { .. }
+                    )
+                });
+                let subject_fallible = if has_fallible_arms {
+                    false
+                } else {
+                    self.IsFallibleExpression(shader, locals, Subject)
+                };
+                subject_fallible
+                    || Arms
+                        .iter()
+                        .any(|arm| self.IsFallibleExpression(shader, locals, &arm.Value))
+            }
+            SdslvExpression::WhenUtility {
+                Options,
+                Cases,
+                ElseValue,
+                ..
+            } => {
+                let options_fallible = Options.as_ref().is_some_and(|x| {
+                    x.Hysteresis
+                        .as_ref()
+                        .is_some_and(|v| self.IsFallibleExpression(shader, locals, v))
+                        || x.MinCommit
+                            .as_ref()
+                            .is_some_and(|v| self.IsFallibleExpression(shader, locals, v))
+                });
+                options_fallible
+                    || Cases.iter().any(|c| {
+                        self.IsFallibleExpression(shader, locals, &c.Value)
+                            || self.IsFallibleExpression(shader, locals, &c.Guard)
+                            || self.IsFallibleExpression(shader, locals, &c.Score)
+                    })
+                    || self.IsFallibleExpression(shader, locals, ElseValue)
+            }
+            _ => false,
+        }
+    }
+
+    fn ValidateArrayLiteralAgainstExpectedType(
+        &mut self,
+        shader: &SdslvShaderDecl,
+        locals: &HashMap<String, TypeRef>,
+        expression: &SdslvExpression,
+        expected_type: &TypeRef,
+    ) {
+        let SdslvExpression::ArrayLiteral { Elements, .. } = expression else {
+            return;
+        };
+        let TypeRef::Array { Element, Length } = expected_type else {
+            self.Err(&format!(
+                "array literal cannot initialize non-array type {}; use floatN(...) or float4x4(...) constructors for vector/matrix values",
+                self.TypeName(expected_type)
+            ));
+            return;
+        };
+        if *Length == 0 {
+            self.Err("array literals require positive fixed array lengths in SDSL-V M61");
+            return;
+        }
+        if Elements.len() != *Length {
+            self.Err(&format!(
+                "array literal length mismatch: expected {} elements, found {}",
+                Length,
+                Elements.len()
+            ));
+        }
+        for element in Elements {
+            let actual = self.ResolveExpressionType(shader, locals, element);
+            if let Some((_, expected_name, actual_name)) =
+                self.TypeMismatch("", Element.as_ref(), &actual)
+            {
+                self.Err(&format!(
+                    "array literal element type mismatch: expected {}, found {}",
+                    expected_name, actual_name
+                ));
+            }
+        }
+    }
+
+    fn ResolveFieldType(&self, base_type: &TypeRef, field: &str) -> TypeRef {
+        let Some(base_name) = base_type.Name() else {
+            return TypeRef::Unknown;
+        };
+        if let Some(stream) = self.StreamByName.get(base_name)
+            && let Some(stream_field) = stream.Fields.iter().find(|x| x.Name == field)
+        {
+            return self.TypeRefToType(&stream_field.TypeName);
+        }
+        let underlying = self.ResolveUnderlyingName(base_name);
+        if let Some(swizzle) = Self::ResolveSwizzleType(&underlying, field) {
+            return TypeRef::Named(swizzle);
+        }
+        TypeRef::Unknown
+    }
+
+    fn ResolveSwizzleType(base: &str, field: &str) -> Option<String> {
+        let base_dim = match base {
+            "float2" => 2,
+            "float3" => 3,
+            "float4" => 4,
+            _ => return None,
+        };
+        if !field.chars().all(|c| matches!(c, 'x' | 'y' | 'z' | 'w')) {
+            return None;
+        }
+        let max = field
+            .chars()
+            .map(|c| match c {
+                'x' => 1,
+                'y' => 2,
+                'z' => 3,
+                'w' => 4,
+                _ => 0,
+            })
+            .max()
+            .unwrap_or(0);
+        if max > base_dim {
+            return None;
+        }
+        match field.len() {
+            1 => Some("float".to_string()),
+            2..=4 => Some(format!("float{}", field.len())),
+            _ => None,
+        }
+    }
+
+    fn TypeRefToType(&self, type_ref: &SdslvTypeRef) -> TypeRef {
+        match type_ref {
+            SdslvTypeRef::Named(path) => TypeRef::Named(path.Segments.join(".")),
+            SdslvTypeRef::Array {
+                Element, Length, ..
+            } => TypeRef::Array {
+                Element: Box::new(self.TypeRefToType(Element)),
+                Length: *Length,
+            },
+        }
+    }
+
+    fn IsKnownTypeRef(&self, type_ref: &SdslvTypeRef, shader_generics: &[String]) -> bool {
+        match type_ref {
+            SdslvTypeRef::Named(path) => {
+                let name = path.Segments.join(".");
+                shader_generics.contains(&name) || self.IsKnownTypeName(&name)
+            }
+            SdslvTypeRef::Array { Element, .. } => self.IsKnownTypeRef(Element, shader_generics),
+        }
+    }
+
+    fn IsKnownTypeName(&self, name: &str) -> bool {
+        Self::IsBuiltinFlowBoardType(name)
+            || name == "string"
+            || name == "Error"
+            || self.AliasUnderlyingByName.contains_key(name)
+            || self.StreamByName.contains_key(name)
+            || self.RecordByName.contains_key(name)
+            || self.EnumByName.contains_key(name)
+    }
+
+    fn ValidateTypeRefKnown(
+        &mut self,
+        type_ref: &SdslvTypeRef,
+        message: &str,
+        shader_generics: &[String],
+    ) {
+        if !self.IsKnownTypeRef(type_ref, shader_generics) {
+            self.Err(message);
+        }
+    }
+    fn TypeName(&self, t: &TypeRef) -> String {
+        t.Name().unwrap_or("<unknown>").to_string()
+    }
+
+    fn TypeMismatch(
+        &self,
+        prefix: &str,
+        expected: &TypeRef,
+        actual: &TypeRef,
+    ) -> Option<(String, String, String)> {
+        if self.AreCompatible(expected, actual) {
+            return None;
+        }
+        let (Some(e), Some(a)) = (expected.Name(), actual.Name()) else {
+            return None;
+        };
+        Some((prefix.to_string(), e.to_string(), a.to_string()))
+    }
+
+    fn AreCompatible(&self, expected: &TypeRef, actual: &TypeRef) -> bool {
+        let (Some(e), Some(a)) = (expected.Name(), actual.Name()) else {
+            return true;
+        };
+        if e == a {
+            return true;
+        }
+        let e_sem = self.SemanticAliasNames.contains(e);
+        let a_sem = self.SemanticAliasNames.contains(a);
+        let e_under = self.ResolveUnderlyingName(e);
+        let a_under = self.ResolveUnderlyingName(a);
+        if e_sem && !a_sem {
+            return e_under == a_under;
+        }
+        if e_sem || a_sem {
+            return false;
+        }
+        e_under == a_under
+    }
+
+    fn ResolveUnderlyingName(&self, name: &str) -> String {
+        let mut current = Self::NormalizeBuiltinTypeName(name);
+        let mut guard = 0;
+        while let Some(next) = self.AliasUnderlyingByName.get(&current) {
+            current = Self::NormalizeBuiltinTypeName(next);
+            guard += 1;
+            if guard > 64 {
+                break;
+            }
+        }
+        current
+    }
+    fn NormalizeBuiltinTypeName(name: &str) -> String {
+        match name {
+            "f32" => "float".to_string(),
+            "i32" => "i32".to_string(),
+            "u32" => "u32".to_string(),
+            _ => name.to_string(),
+        }
+    }
+
+    fn IsValidFlowBoardTypeName(&self, name: &str) -> bool {
+        if Self::IsBuiltinFlowBoardType(name) {
+            return true;
+        }
+        self.AliasUnderlyingByName.contains_key(name)
+    }
+
+    fn IsBuiltinFlowBoardType(name: &str) -> bool {
+        matches!(
+            name,
+            "bool" | "i32" | "u32" | "f32" | "float" | "float2" | "float3" | "float4" | "float4x4"
+        )
+    }
+    fn IsBuiltinCtor(name: &str) -> bool {
+        matches!(name, "float2" | "float3" | "float4" | "float4x4")
+    }
+
+    fn ValidateGenericConstraints(&mut self, shader: &SdslvShaderDecl) {
+        /* unchanged */
+        let mut generic_names = HashSet::new();
+        for generic in &shader.GenericParameters {
+            if !generic_names.insert(generic.clone()) {
+                self.Err(&format!(
+                    "shader '{}' has duplicate generic parameter '{}'",
+                    shader.Name, generic
+                ));
+            }
+        }
+        let mut seen_pairs = HashSet::new();
+        for constraint in &shader.Constraints {
+            if !generic_names.contains(&constraint.ParameterName) {
+                self.Err(&format!(
+                    "shader '{}' has where constraint on unknown generic parameter '{}'",
+                    shader.Name, constraint.ParameterName
+                ));
+            }
+            for bound in &constraint.Bounds {
+                let name = bound.Segments.join(".");
+                if !self.InterfaceByName.contains_key(&name) {
+                    self.Err(&format!("shader '{}' has where constraint '{}' : '{}' but interface '{}' is unknown", shader.Name, constraint.ParameterName, name, name));
+                }
+                let pair = format!("{}::{}", constraint.ParameterName, name);
+                if !seen_pairs.insert(pair) {
+                    self.Err(&format!(
+                        "shader '{}' repeats where constraint '{}' : '{}'",
+                        shader.Name, constraint.ParameterName, name
+                    ));
+                }
+            }
+        }
+    }
+    fn ValidateShaderDuplicates(&mut self, shader: &SdslvShaderDecl) {
+        let mut material = HashSet::new();
+        for field in &shader.MaterialFields {
+            if !material.insert(field.Name.clone()) {
+                self.Err(&format!(
+                    "duplicate material field '{}' in shader '{}'",
+                    field.Name, shader.Name
+                ));
+            }
+        }
+        let mut methods = HashSet::new();
+        for method in &shader.Methods {
+            if !methods.insert(method.Name.clone()) {
+                self.Err(&format!(
+                    "duplicate shader method '{}' in shader '{}'",
+                    method.Name, shader.Name
+                ));
+            }
+        }
+        let mut stages = HashSet::new();
+        for stage_method in &shader.StageMethods {
+            if !stages.insert(stage_method.Name.clone()) {
+                self.Err(&format!(
+                    "duplicate stage method '{}' in shader '{}'",
+                    stage_method.Name, shader.Name
+                ));
+            }
+            if methods.contains(&stage_method.Name) {
+                self.Err(&format!(
+                    "shader '{}' has method '{}' that collides with stage method name",
+                    shader.Name, stage_method.Name
+                ));
+            }
+        }
+    }
+    fn ValidateStages(&mut self, shader: &SdslvShaderDecl) {
+        for method in &shader.StageMethods {
+            match method.Stage.as_deref() {
+                Some("vertex") | Some("pixel") | Some("compute") => {}
+                Some(stage_name) => {
+                    self.Err(&format!(
+                        "stage '{}' is not supported in SDSL-V v0",
+                        stage_name
+                    ));
+                }
+                None => self.Err(&format!(
+                    "stage method '{}' in shader '{}' is missing stage name",
+                    method.Name, shader.Name
+                )),
+            }
+            if method.Body.is_none() {
+                self.Err(&format!(
+                    "stage method '{}' in shader '{}' must have a body",
+                    method.Name, shader.Name
+                ));
+            }
+        }
+    }
+    fn ValidateImplementsAndOverrides(&mut self, shader: &SdslvShaderDecl) {
+        let mut required_methods: HashMap<String, &SdslvFunctionDecl> = HashMap::new();
+        for iface in &shader.Implements {
+            let iface_name = iface.Segments.join(".");
+            let interface = match self.InterfaceByName.get(&iface_name) {
+                Some(x) => *x,
+                None => {
+                    self.Err(&format!(
+                        "shader '{}' implements unknown interface '{}'",
+                        shader.Name, iface_name
+                    ));
+                    continue;
+                }
+            };
+            for method in &interface.Methods {
+                required_methods.insert(method.Name.clone(), method);
+            }
+        }
+        for required in required_methods.values() {
+            let shader_method = shader.Methods.iter().find(|m| m.Name == required.Name);
+            match shader_method {
+                None => self.Err(&format!(
+                    "shader '{}' implements interface method '{}' but does not override it",
+                    shader.Name, required.Name
+                )),
+                Some(method) => {
+                    if !method.IsOverride {
+                        self.Err(&format!(
+                            "shader '{}' method '{}' must be marked override",
+                            shader.Name, method.Name
+                        ));
+                    }
+                    if !Self::SameSignature(method, required) {
+                        self.Err(&format!("shader '{}' override '{}' signature does not match interface declaration", shader.Name, method.Name));
+                    }
+                }
+            }
+        }
+        for method in &shader.Methods {
+            if method.IsOverride && !required_methods.contains_key(&method.Name) {
+                self.Err(&format!(
+                    "shader '{}' override method '{}' is not declared by implemented interfaces",
+                    shader.Name, method.Name
+                ));
+            }
+        }
+    }
+    fn SameSignature(left: &SdslvFunctionDecl, right: &SdslvFunctionDecl) -> bool {
+        if left.Parameters.len() != right.Parameters.len() {
+            return false;
+        }
+        if left.ReturnType != right.ReturnType {
+            return false;
+        }
+        for index in 0..left.Parameters.len() {
+            if left.Parameters[index].TypeName != right.Parameters[index].TypeName {
+                return false;
+            }
+        }
+        true
+    }
+    fn Err(&mut self, message: &str) {
+        self.Diagnostics
+            .push(SdslvDiagnostic::New(message, Self::UnknownSpan()));
+    }
+    fn UnknownSpan() -> SdslvSpan {
+        SdslvSpan {
+            Start: 0,
+            End: 0,
+            Line: 1,
+            Column: 1,
+        }
+    }
+}

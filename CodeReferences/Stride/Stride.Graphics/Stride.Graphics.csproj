@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../build/StriV.Core.Profile.props" />
+  <PropertyGroup>
+    <AssemblyName>Stride.Graphics</AssemblyName>
+    <RootNamespace>Stride</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);STRIDE_GRAPHICS_NO_DESCRIPTOR_COPIES</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="**/*.cs" Exclude="**/bin/**;**/obj/**" />
+    <Compile Include="../../../sources/shared/SharedAssemblyInfo.cs">
+      <Link>Properties/SharedAssemblyInfo.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Stri-V clean core is Linux/Vulkan-first; Windows Mixed Reality presenter is UWP/Direct3D-specific. -->
+    <Compile Remove="WindowsMixedReality/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Stride/Stride.csproj" />
+    <ProjectReference Include="../Stride.Shaders/Stride.Shaders.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MSDF-Sharp.Core" />
+    <PackageReference Include="Remora.MSDFGen" />
+    <PackageReference Include="System.Memory">
+      <NoWarn>NU1510</NoWarn>
+    </PackageReference>
+    <PackageReference Include="Vortice.Vulkan" />
+    <PackageReference Include="Silk.NET.Sdl" />
+  </ItemGroup>
+  <Import Project="../../build/StriV.AssemblyProcessor.targets" />
+</Project>

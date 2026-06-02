@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../build/StriV.Core.Profile.props" />
+  <PropertyGroup>
+    <AssemblyName>Stride.Rendering</AssemblyName>
+    <RootNamespace>Stride.Rendering</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <StriVAssemblyProcessorOptions>--parameter-key --auto-module-initializer --serialization</StriVAssemblyProcessorOptions>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="**/*.cs" Exclude="**/bin/**;**/obj/**" />
+    <Compile Include="../../../sources/shared/SharedAssemblyInfo.cs">
+      <Link>Properties/SharedAssemblyInfo.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Stride.Games/Stride.Games.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Stri-V Core excludes editor/Game Studio presentation shaders from clean runtime rendering. -->
+    <Compile Remove="Rendering/Editor/**/*.cs" />
+    <!-- Stri-V Core is desktop Vulkan-first and currently excludes VR-specific shader key plumbing. -->
+    <Compile Remove="Rendering/Shaders/GlobalVR.sdsl.cs" />
+  </ItemGroup>
+  <Import Project="../../build/StriV.AssemblyProcessor.targets" />
+</Project>
