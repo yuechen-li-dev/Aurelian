@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Aurelian.Actuation/Aurelian.Actuation.csproj" />
+    <Project Path="src/Aurelian.Core/Aurelian.Core.csproj" />
+    <Project Path="src/Aurelian.Rendering.Contracts/Aurelian.Rendering.Contracts.csproj" />
+    <Project Path="src/Aurelian.Runtime/Aurelian.Runtime.csproj" />
+    <Project Path="src/Aurelian.World/Aurelian.World.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Aurelian.Actuation.Tests/Aurelian.Actuation.Tests.csproj" />
+    <Project Path="tests/Aurelian.Core.Tests/Aurelian.Core.Tests.csproj" />
+    <Project Path="tests/Aurelian.Rendering.Contracts.Tests/Aurelian.Rendering.Contracts.Tests.csproj" />
+    <Project Path="tests/Aurelian.Runtime.Tests/Aurelian.Runtime.Tests.csproj" />
+    <Project Path="tests/Aurelian.World.Tests/Aurelian.World.Tests.csproj" />
+  </Folder>
+</Solution>
