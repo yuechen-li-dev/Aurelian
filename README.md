@@ -4,9 +4,9 @@ Aurelian is a greenfield C# engine/runtime project created after the Stri-V resc
 
 ## Status
 
-Aurelian is currently in pre-MVP module bring-up. The repository contains a clean solution skeleton, strict build discipline, architecture notes, smoke tests, the first vendored runtime dependency (Dominatus), and the linked `Aurelian.Shaders` module.
+Aurelian is currently in pre-MVP module bring-up. The repository contains a clean solution skeleton, strict build discipline, architecture notes, smoke tests, the first vendored runtime dependency (Dominatus), and the linked `Aurelian.Shaders`, `Aurelian.Assets`, and `Aurelian.AssetTool` modules.
 
-A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aurelian.Shaders`. A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`. A5 added the first token-driven SDSL-V parser M0 path under `Aurelian.Shaders.Language`. A6 expanded the new parser to M1 statement/expression syntax and added an explicit WyrmCoil ↔ Aurelian SDSL-V compatibility matrix. A7 added validation M0, A8 added HLSL emission M0, A9 added a new `Aurelian.Shaders.Language.Artifacts` manifest M0 over the source -> parse -> validate -> HLSL emit -> artifact/manifest path, and A10 added optional DXC validation M0 for generated HLSL artifacts when a DXC executable is available, while the legacy carried-over shader parser, AST, lowerer, artifact emitter, mixin/effect, and base-shader behavior remain temporarily in place.
+A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aurelian.Shaders`. A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`. A5 added the first token-driven SDSL-V parser M0 path under `Aurelian.Shaders.Language`. A6 expanded the new parser to M1 statement/expression syntax and added an explicit WyrmCoil ↔ Aurelian SDSL-V compatibility matrix. A7 added validation M0, A8 added HLSL emission M0, A9 added a new `Aurelian.Shaders.Language.Artifacts` manifest M0 over the source -> parse -> validate -> HLSL emit -> artifact/manifest path, and A10 added optional DXC validation M0 for generated HLSL artifacts when a DXC executable is available. A11 converted the remaining carried-over asset projects into `Aurelian.Assets` and `Aurelian.AssetTool`, while the early asset pipeline remains schema-convergence work and the legacy carried-over shader parser, AST, lowerer, artifact emitter, mixin/effect, and base-shader behavior remain temporarily in place.
 
 ## What Aurelian is
 
@@ -16,6 +16,8 @@ A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aure
 - A typed lifecycle, actuator-owned side-effect, render-snapshot, and command-plan oriented architecture.
 - A test-first codebase with nullable reference types and warnings-as-errors for Aurelian-owned projects.
 - The home of `Aurelian.Shaders`, an Aurelian-owned shader module with a new WyrmCoil-inspired SDSL-V AST contract, token-driven parser/validator/HLSL emitter paths, a deterministic SDSL-V artifact manifest M0, optional DXC validation M0, an explicit compatibility matrix, and a temporarily preserved carried-over legacy pipeline.
+- The home of `Aurelian.Assets`, an early Aurelian-owned TOML/manifest orchestration module converted from the carried-over Stri-V asset pipeline.
+- The home of `Aurelian.AssetTool`, a CLI wrapper over Aurelian asset pipeline functionality converted from the carried-over Stri-V asset tool.
 
 ## What Aurelian is not
 
@@ -23,8 +25,14 @@ A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aure
 - It does not use the Stride processor architecture as its runtime core.
 - It does not use the Stride asset system as its asset foundation.
 - It is not editor-first.
-- It does not contain renderer, windowing, triangle, asset-pipeline, Machina integration, WyrmCoil integration, or remaining Stri-V salvage integration.
+- It does not contain renderer, windowing, triangle, Machina integration, WyrmCoil integration, or remaining unconverted Stri-V salvage projects.
 - It does not reference or compile WyrmCoil code; WyrmCoil remains reference-only, with SDSL-V semantics compared through an explicit compatibility matrix rather than blindly copied into production code.
+
+## Asset modules
+
+A11 links `src/Aurelian.Assets/Aurelian.Assets.csproj` and `src/Aurelian.AssetTool/Aurelian.AssetTool.csproj` into `Aurelian.slnx` with smoke tests under `tests/Aurelian.Assets.Tests/` and `tests/Aurelian.AssetTool.Tests/`. These modules were converted from the remaining carried-over `StriV.AssetPipeline` and `StriV.AssetTool` projects as identity and solution-integration work, not as a broad asset-system redesign.
+
+`Aurelian.Assets` should own TOML/manifest-based asset orchestration and may call `Aurelian.Shaders` for shader artifact generation. `Aurelian.Shaders` remains the owner of SDSL-V parsing, validation, HLSL emission, artifact contracts, and optional DXC validation. No Stride asset system, Stride dependencies, renderer/windowing, Machina integration, or WyrmCoil source references are used.
 
 ## Vendored runtime dependency
 
@@ -53,7 +61,7 @@ Current reference folders include:
 - `CodeReferences/WyrmCoil`
 - `CodeReferences/oct`
 
-`src/StriV.AssetPipeline` and `src/StriV.AssetTool` remain salvage candidates only and are not linked into Aurelian.
+`src/StriV.AssetPipeline` and `src/StriV.AssetTool` have been consumed by `src/Aurelian.Assets` and `src/Aurelian.AssetTool`. `Aurelian.Assets` owns early TOML/manifest orchestration and may need schema convergence; `Aurelian.Shaders` continues to own SDSL-V parsing, validation, HLSL emission, artifact contracts, and optional DXC validation. Aurelian does not use the Stride asset system.
 
 ## Build and test
 
