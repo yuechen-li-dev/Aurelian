@@ -5,7 +5,7 @@ Aurelian is a greenfield C# engine/runtime created after the Stri-V rescue effor
 ## Core principles
 
 - Aurelian is a greenfield C# engine/runtime.
-- Aurelian will adopt a Dominatus-native behavior/runtime spine beginning in A1, after Dominatus is vendored as buildable source under `vendor/Dominatus/`.
+- Aurelian adopts a Dominatus-native behavior/runtime spine beginning in A1, with Dominatus vendored as buildable source under `vendor/Dominatus/`.
 - The world model is explicit data first: engine state should be visible, testable, serializable where appropriate, and not hidden behind editor-first object graphs.
 - Lifecycle flow should use typed lifecycle events rather than stringly or implicit processor callbacks.
 - Side effects belong to actuators. Actuators own interactions with external systems and make effects intentional at architectural boundaries.
@@ -19,5 +19,10 @@ Aurelian is a greenfield C# engine/runtime created after the Stri-V rescue effor
 - No Stride processor architecture as the runtime core.
 - No Stride asset system as the Aurelian asset foundation.
 - No editor-first strategy.
-- No renderer implementation in A0.
-- No window creation or triangle rendering in A0.
+- No renderer implementation in A1.
+- No window creation or triangle rendering in A1.
+- No Machina, WyrmCoil, Stri-V salvage, graphics package, or windowing package linkage in A1.
+
+## Current spine status
+
+A1 establishes only a minimal Dominatus runtime smoke path. The smoke constructs a tiny Dominatus world, graph, agent, and actuation host, ticks once deterministically, and observes an immediate Dominatus actuation completion payload. It is not the final runtime API and does not add renderer, asset, shader, windowing, or world-store architecture.

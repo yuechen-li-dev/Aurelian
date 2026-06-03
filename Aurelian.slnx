@@ -13,4 +13,10 @@
     <Project Path="tests/Aurelian.Runtime.Tests/Aurelian.Runtime.Tests.csproj" />
     <Project Path="tests/Aurelian.World.Tests/Aurelian.World.Tests.csproj" />
   </Folder>
+  <Folder Name="/vendor/" />
+  <Folder Name="/vendor/Dominatus/" />
+  <Folder Name="/vendor/Dominatus/src/">
+    <Project Path="vendor/Dominatus/src/Dominatus.Core/Dominatus.Core.csproj" />
+    <Project Path="vendor/Dominatus/src/Dominatus.OptFlow/Dominatus.OptFlow.csproj" />
+  </Folder>
 </Solution>

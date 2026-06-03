@@ -13,20 +13,31 @@ Current reference folders include:
 - `CodeReferences/Machina` — reference-only Machina material.
 - `CodeReferences/oct` — reference-only material.
 
-A0 does not reference `Stride.Graphics`, `Stride.Rendering`, `Stride.Shaders`, Machina, WyrmCoil, oct, or any project under `CodeReferences/`.
+Aurelian does not reference `Stride.Graphics`, `Stride.Rendering`, `Stride.Shaders`, Machina, WyrmCoil, oct, or any project under `CodeReferences/`.
 
-## Future Dominatus vendor boundary
+## Dominatus vendor boundary
 
-Dominatus is not currently vendored as buildable source in this repository. The future actual Dominatus vendor location is:
+Dominatus is now the first buildable vendored runtime dependency for Aurelian. A1 vendors the minimal Dominatus source needed for the runtime smoke under:
 
 ```text
 vendor/Dominatus/
 ```
 
-A1 will vendor Dominatus there, add buildable Dominatus projects to the solution, and add the first runtime smoke test. A0 deliberately contains no Dominatus project references or package references.
+The A1 vendor subset contains:
+
+```text
+vendor/Dominatus/README.md
+vendor/Dominatus/LICENSE.txt
+vendor/Dominatus/src/Dominatus.Core/
+vendor/Dominatus/src/Dominatus.OptFlow/
+```
+
+Only `Dominatus.Core` and `Dominatus.OptFlow` are linked in `Aurelian.slnx`. `Aurelian.Runtime` references `Dominatus.Core` for the A1 smoke harness. `Aurelian.Core` remains Dominatus-free.
+
+Dominatus was copied from `https://github.com/yuechen-li-dev/Dominatus/` at commit `220df609fc5c4aebca63ed07b953aa13be969ac2`.
 
 ## Stri-V salvage boundary
 
-The existing `src/StriV.*` projects are salvage candidates only. They are not linked in A0, not migrated in A0, and not part of `Aurelian.slnx`.
+The existing `src/StriV.*` projects are salvage candidates only. They are not linked in Aurelian, not migrated in A1, and not part of `Aurelian.slnx`.
 
-Aurelian core must not take a Machina dependency. Any future integration must be explicit, phase-scoped, and outside A0.
+Aurelian core must not take Machina, Stride, WyrmCoil, or Stri-V salvage dependencies. Any future integration must be explicit, phase-scoped, and outside A1.
