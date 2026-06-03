@@ -5,4 +5,5 @@ public enum SdslvDiagnosticPhase
     Lexing,
     Parsing,
     Validation,
+    Emission,
 }
