@@ -117,7 +117,7 @@ If the compiler cannot see the dependency, Aurelian should distrust it.
 
 - `Aurelian.Core` should stay minimal and dependency-light.
 - `Aurelian.World` must not depend on rendering, assets, shaders, Dominatus, physics, navigation, or UI.
-- `Aurelian.Rendering.Contracts` contains renderer-independent DTOs only: render snapshots, items, cameras, resource refs, statuses, and diagnostics. It must not depend on world, assets, shaders, graphics/windowing packages, GPU handles, or backend object models.
+- `Aurelian.Rendering.Contracts` contains renderer-independent DTOs only: render snapshots, items, cameras, resource refs, command plans, draw items, pass plans, symbolic pipeline/shader/target refs, statuses, reasons, diagnostics, and contract-local snapshot-to-plan assembly. It must not depend on world, assets, shaders, graphics/windowing packages, GPU handles, or backend object models.
 - Future world-to-render extraction should be added only when the dependency boundary is real; do not split out extraction solely to make smaller files or fake-clean architecture.
 - `Aurelian.Actuation` may depend on world contracts for world mutation.
 - `Aurelian.Runtime` integrates Dominatus and dispatch.
@@ -155,7 +155,7 @@ Examples:
 ## 10. First practical implications
 
 - World typed data stores should stay library-free for now.
-- Render snapshot contracts are DTO-only in `Aurelian.Rendering.Contracts`; extraction, null renderer/backend, GPU command planning, and Silk.NET/Vortice-backed rendering remain future work.
+- Render snapshot and command-plan contracts are DTO-only in `Aurelian.Rendering.Contracts`; world extraction, null renderer/backend implementation, GPU command execution, and Silk.NET/Vortice-backed rendering remain future work.
 - Render backend can later use Silk.NET/Vortice behind `Aurelian.Rendering.*`.
 - Physics can later use BEPU behind `Aurelian.Physics.*`.
 - Navigation can later use DotRecast behind `Aurelian.Navigation.*`.
