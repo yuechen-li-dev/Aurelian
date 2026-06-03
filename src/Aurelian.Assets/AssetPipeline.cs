@@ -1,9 +1,9 @@
-using StriV.ShaderPipeline.Artifacts;
-using StriV.ShaderPipeline.Parsing;
+using Aurelian.Shaders.Artifacts;
+using Aurelian.Shaders.Parsing;
 using Tomlyn;
 using Tomlyn.Model;
 
-namespace StriV.AssetPipeline;
+namespace Aurelian.Assets;
 
 public sealed class AssetManifest
 {
@@ -69,11 +69,17 @@ public static class AssetManifestValidator
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var shader in manifest.Shaders)
         {
-            if (!ids.Add(shader.Id)) diags.Add(new("AM200", "error", $"Duplicate asset ID '{shader.Id}'.", manifestPath));
-            if (new[] { shader.Id, shader.Source, shader.Entry, shader.Backend, shader.Profile }.Any(string.IsNullOrWhiteSpace)) diags.Add(new("AM201", "error", $"Missing required field in shader '{shader.Id}'.", manifestPath));
-            if (Path.IsPathRooted(shader.Source) || shader.Source.Contains("..") || shader.Source.Contains('\\')) diags.Add(new("AM202", "error", $"Invalid source path '{shader.Source}'.", manifestPath));
-            if (!string.Equals(shader.Backend, "vulkan", StringComparison.Ordinal) || !string.Equals(shader.Profile, "default", StringComparison.Ordinal)) diags.Add(new("AM203", "error", $"Unsupported backend/profile '{shader.Backend}/{shader.Profile}'.", manifestPath));
-            if (!System.Text.RegularExpressions.Regex.IsMatch(shader.Id ?? string.Empty, "^[a-z0-9._-]+$")) diags.Add(new("AM201", "error", $"Invalid id '{shader.Id}'.", manifestPath));
+            var shaderId = shader.Id ?? string.Empty;
+            var shaderSource = shader.Source ?? string.Empty;
+            var shaderEntry = shader.Entry ?? string.Empty;
+            var shaderBackend = shader.Backend ?? string.Empty;
+            var shaderProfile = shader.Profile ?? string.Empty;
+
+            if (!ids.Add(shaderId)) diags.Add(new("AM200", "error", $"Duplicate asset ID '{shaderId}'.", manifestPath));
+            if (new[] { shaderId, shaderSource, shaderEntry, shaderBackend, shaderProfile }.Any(string.IsNullOrWhiteSpace)) diags.Add(new("AM201", "error", $"Missing required field in shader '{shaderId}'.", manifestPath));
+            if (Path.IsPathRooted(shaderSource) || shaderSource.Contains("..") || shaderSource.Contains('\\')) diags.Add(new("AM202", "error", $"Invalid source path '{shaderSource}'.", manifestPath));
+            if (!string.Equals(shaderBackend, "vulkan", StringComparison.Ordinal) || !string.Equals(shaderProfile, "default", StringComparison.Ordinal)) diags.Add(new("AM203", "error", $"Unsupported backend/profile '{shaderBackend}/{shaderProfile}'.", manifestPath));
+            if (!System.Text.RegularExpressions.Regex.IsMatch(shaderId, "^[a-z0-9._-]+$")) diags.Add(new("AM201", "error", $"Invalid id '{shaderId}'.", manifestPath));
         }
 
         var shaderIds = manifest.Shaders.Select(s => s.Id).ToHashSet(StringComparer.Ordinal);

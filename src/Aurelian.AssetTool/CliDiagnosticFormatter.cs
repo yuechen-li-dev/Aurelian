@@ -1,7 +1,7 @@
 using System.Text.Json;
-using StriV.AssetPipeline;
+using Aurelian.Assets;
 
-namespace StriV.AssetTool;
+namespace Aurelian.AssetTool;
 
 public enum DiagnosticFormat
 {

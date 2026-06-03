@@ -1,7 +1,7 @@
 using System.CommandLine;
 using System.Text.Json;
-using StriV.AssetPipeline;
-using StriV.AssetTool;
+using Aurelian.Assets;
+using Aurelian.AssetTool;
 
 var manifestOption = new Option<FileInfo>("--manifest") { Required = true, Description = "Path to assets.toml manifest file." };
 var outputOption = new Option<DirectoryInfo>("--output") { Required = true, Description = "Output directory for generated shader artifacts." };
@@ -78,7 +78,7 @@ buildAssetsCommand.SetAction(parseResult =>
     return 0;
 });
 
-var root = new RootCommand("Stri-V asset pipeline command-line tool.");
+var root = new RootCommand("Aurelian asset pipeline command-line tool.");
 root.Subcommands.Add(buildAssetsCommand);
 return await root.Parse(args).InvokeAsync();
 

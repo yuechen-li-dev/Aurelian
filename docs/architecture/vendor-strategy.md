@@ -44,10 +44,16 @@ A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.L
 
 WyrmCoil remains reference-only: Aurelian compares and copies language semantics conceptually where useful, not by referencing or compiling WyrmCoil code. Aurelian SDSL-V is its own production C# implementation, and compatibility decisions are tracked explicitly rather than treating WyrmCoil as production truth. `Aurelian.Shaders` must not add project references to `CodeReferences/*`, Stride, Machina, WyrmCoil, Copeland, or the remaining Stri-V salvage projects. Old Stride mixins and old Stride effect/base-shader inheritance are not native Aurelian SDSL-V features.
 
+## Aurelian.Assets and Aurelian.AssetTool module boundary
+
+A11 consumed the remaining carried-over Stri-V asset projects: `src/StriV.AssetPipeline` is now `src/Aurelian.Assets`, and `src/StriV.AssetTool` is now `src/Aurelian.AssetTool`. Both modules are linked in `Aurelian.slnx` with smoke tests under `tests/Aurelian.Assets.Tests/` and `tests/Aurelian.AssetTool.Tests/`.
+
+`Aurelian.Assets` owns early TOML/manifest-based asset orchestration and may call `Aurelian.Shaders` for shader artifact generation. `Aurelian.AssetTool` is a CLI wrapper over Aurelian asset pipeline functionality. This conversion is identity and solution integration only; asset manifest schema convergence and shader asset bridging remain follow-up work.
+
+`Aurelian.Shaders` owns SDSL-V parsing, validation, HLSL emission, artifact contracts, and optional DXC validation. `Aurelian.Assets` must not become a Stride asset system port and must not add Stride, Machina, WyrmCoil, Copeland, or `CodeReferences/*` dependencies.
+
 ## Stri-V salvage boundary
 
-`src/StriV.AssetPipeline` and `src/StriV.AssetTool` remain salvage candidates only. They are not linked in Aurelian, not migrated in A3, and not part of `Aurelian.slnx`.
-
-The former `src/StriV.ShaderPipeline` identity has been consumed by `src/Aurelian.Shaders`; its current code is migration scaffold, not final Aurelian SDSL-V semantics.
+The former `src/StriV.ShaderPipeline`, `src/StriV.AssetPipeline`, and `src/StriV.AssetTool` identities have now been consumed by Aurelian modules. Current carried-over code remains migration scaffold where noted, not final Aurelian semantics.
 
 Aurelian core must not take Machina, Stride, WyrmCoil, or Stri-V salvage dependencies. Any future integration must be explicit, phase-scoped, and keep `CodeReferences/*` reference-only.
