@@ -40,9 +40,9 @@ Dominatus was copied from `https://github.com/yuechen-li-dev/Dominatus/` at comm
 
 A3 converted the carried-over `src/StriV.ShaderPipeline/` project identity into the Aurelian-owned `src/Aurelian.Shaders/` module and linked it in `Aurelian.slnx` with matching smoke tests under `tests/Aurelian.Shaders.Tests/`.
 
-A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`. The legacy carried-over AST/parser/lowerer and artifact emitter remain temporarily in place and keep their existing behavior until parser and lowerer convergence milestones replace them deliberately. A5 will begin parser convergence for the new AST.
+A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`. A5 began parser convergence for the new AST, and A6 expanded the parser to M1 statements/expressions while adding `docs/architecture/sdslv-compatibility-matrix.md`. The legacy carried-over AST/parser/lowerer and artifact emitter remain temporarily in place and keep their existing behavior until parser, validation, and lowerer convergence milestones replace them deliberately.
 
-WyrmCoil remains reference-only: Aurelian copies language semantics conceptually, not by referencing or compiling WyrmCoil code. `Aurelian.Shaders` must not add project references to `CodeReferences/*`, Stride, Machina, WyrmCoil, Copeland, or the remaining Stri-V salvage projects.
+WyrmCoil remains reference-only: Aurelian compares and copies language semantics conceptually where useful, not by referencing or compiling WyrmCoil code. Aurelian SDSL-V is its own production C# implementation, and compatibility decisions are tracked explicitly rather than treating WyrmCoil as production truth. `Aurelian.Shaders` must not add project references to `CodeReferences/*`, Stride, Machina, WyrmCoil, Copeland, or the remaining Stri-V salvage projects. Old Stride mixins and old Stride effect/base-shader inheritance are not native Aurelian SDSL-V features.
 
 ## Stri-V salvage boundary
 

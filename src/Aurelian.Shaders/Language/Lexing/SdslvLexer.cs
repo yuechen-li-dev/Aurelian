@@ -27,6 +27,7 @@ public static class SdslvLexer
         ["board"] = SdslvTokenKind.KeywordBoard,
         ["state"] = SdslvTokenKind.KeywordState,
         ["when"] = SdslvTokenKind.KeywordWhen,
+        ["case"] = SdslvTokenKind.KeywordCase,
         ["goto"] = SdslvTokenKind.KeywordGoto,
         ["return"] = SdslvTokenKind.KeywordReturn,
         ["let"] = SdslvTokenKind.KeywordLet,
@@ -37,6 +38,11 @@ public static class SdslvLexer
         ["switch"] = SdslvTokenKind.KeywordSwitch,
         ["match"] = SdslvTokenKind.KeywordMatch,
         ["utility"] = SdslvTokenKind.KeywordUtility,
+        ["score"] = SdslvTokenKind.KeywordScore,
+        ["with"] = SdslvTokenKind.KeywordWith,
+        ["step"] = SdslvTokenKind.KeywordStep,
+        ["ok"] = SdslvTokenKind.KeywordOk,
+        ["err"] = SdslvTokenKind.KeywordErr,
         ["try"] = SdslvTokenKind.KeywordTry,
         ["unwrap"] = SdslvTokenKind.KeywordUnwrap,
         ["array"] = SdslvTokenKind.KeywordArray,
@@ -250,7 +256,7 @@ public static class SdslvLexer
                 case ',': Add(SdslvTokenKind.Comma, ",", start); break;
                 case ':': Add(SdslvTokenKind.Colon, ":", start); break;
                 case ';': Add(SdslvTokenKind.Semicolon, ";", start); break;
-                case '.': Add(SdslvTokenKind.Dot, ".", start); break;
+                case '.': Add(Match('.') ? SdslvTokenKind.Range : SdslvTokenKind.Dot, source[start.Start.._index], start); break;
                 case '=': Add(Match('>') ? SdslvTokenKind.FatArrow : Match('=') ? SdslvTokenKind.EqEq : SdslvTokenKind.Equals, source[start.Start.._index], start); break;
                 case '-': Add(Match('>') ? SdslvTokenKind.Arrow : SdslvTokenKind.Minus, source[start.Start.._index], start); break;
                 case '+': Add(SdslvTokenKind.Plus, "+", start); break;

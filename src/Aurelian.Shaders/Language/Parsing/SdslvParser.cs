@@ -481,6 +481,16 @@ public static class SdslvParser
                 return new SdslvLetStatement(name, type, initializer);
             }
 
+            if (Match(SdslvTokenKind.KeywordIf))
+            {
+                return ParseIfStatement();
+            }
+
+            if (Match(SdslvTokenKind.KeywordFor))
+            {
+                return ParseForStatement();
+            }
+
             var expression = ParseExpression();
             if (expression is null)
             {
@@ -497,6 +507,67 @@ public static class SdslvParser
 
             Expect(SdslvTokenKind.Semicolon, "Expected ';' after expression statement.");
             return new SdslvExpressionStatement(expression);
+        }
+
+        private SdslvIfStatement? ParseIfStatement()
+        {
+            var start = Previous.Span;
+            var condition = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+            var thenBody = ParseRequiredStatementBlock("Expected '{' after if condition.", "Expected '}' after if body.");
+            IReadOnlyList<SdslvStatement>? elseBody = null;
+            if (Match(SdslvTokenKind.KeywordElse))
+            {
+                elseBody = ParseRequiredStatementBlock("Expected '{' after else.", "Expected '}' after else body.");
+            }
+
+            return new SdslvIfStatement(condition, thenBody, elseBody, start with { End = Previous.Span.End });
+        }
+
+        private SdslvForStatement? ParseForStatement()
+        {
+            var startSpan = Previous.Span;
+            var iterator = ParseIdentifier("Expected iterator name after 'for'.") ?? "<error>";
+            Expect(SdslvTokenKind.KeywordIn, "Expected 'in' after for iterator.");
+            var start = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+            Expect(SdslvTokenKind.Range, "Expected '..' in for range.");
+            var end = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+            SdslvExpression? step = null;
+            if (Match(SdslvTokenKind.KeywordStep))
+            {
+                step = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+            }
+
+            var body = ParseRequiredStatementBlock("Expected '{' after for range.", "Expected '}' after for body.");
+            return new SdslvForStatement(iterator, start, end, step, body, startSpan with { End = Previous.Span.End });
+        }
+
+        private IReadOnlyList<SdslvStatement> ParseRequiredStatementBlock(string openMessage, string closeMessage)
+        {
+            var statements = new List<SdslvStatement>();
+            if (!Expect(SdslvTokenKind.LeftBrace, openMessage))
+            {
+                SynchronizeMember();
+                return statements;
+            }
+
+            while (!AtEnd && !Check(SdslvTokenKind.RightBrace))
+            {
+                var before = _index;
+                var statement = ParseStatement();
+                if (statement is not null)
+                {
+                    statements.Add(statement);
+                }
+
+                if (_index == before)
+                {
+                    ErrorHere("Unexpected token in statement block.");
+                    Advance();
+                }
+            }
+
+            Expect(SdslvTokenKind.RightBrace, closeMessage);
+            return statements;
         }
 
         private SdslvExpression? ParseExpression(int minimumPrecedence = 0)
@@ -531,6 +602,24 @@ public static class SdslvParser
                 return new SdslvUnaryExpression(SdslvUnaryOperator.Negate, operand);
             }
 
+            if (Match(SdslvTokenKind.Bang))
+            {
+                var operand = ParseUnaryOrPrimary() ?? new SdslvIdentifierExpression("<error>");
+                return new SdslvUnaryExpression(SdslvUnaryOperator.Not, operand);
+            }
+
+            if (Match(SdslvTokenKind.KeywordTry))
+            {
+                var fallibleExpression = ParseUnaryOrPrimary() ?? new SdslvIdentifierExpression("<error>");
+                return new SdslvTryPropagateExpression(fallibleExpression, Previous.Span);
+            }
+
+            if (Match(SdslvTokenKind.KeywordUnwrap))
+            {
+                var fallibleExpression = ParseUnaryOrPrimary() ?? new SdslvIdentifierExpression("<error>");
+                return new SdslvUnwrapExpression(fallibleExpression, Previous.Span);
+            }
+
             var expression = ParsePrimary();
             while (expression is not null)
             {
@@ -541,21 +630,7 @@ public static class SdslvParser
                 }
                 else if (Match(SdslvTokenKind.LeftParen))
                 {
-                    var args = new List<SdslvExpression>();
-                    while (!AtEnd && !Check(SdslvTokenKind.RightParen))
-                    {
-                        var arg = ParseExpression();
-                        if (arg is not null)
-                        {
-                            args.Add(arg);
-                        }
-
-                        if (!Match(SdslvTokenKind.Comma))
-                        {
-                            break;
-                        }
-                    }
-
+                    var args = ParseExpressionList(SdslvTokenKind.RightParen);
                     Expect(SdslvTokenKind.RightParen, "Expected ')' after call arguments.");
                     expression = new SdslvCallExpression(expression, args);
                 }
@@ -563,7 +638,19 @@ public static class SdslvParser
                 {
                     var index = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
                     Expect(SdslvTokenKind.RightBracket, "Expected ']' after index expression.");
-                    expression = new SdslvIndexExpression(expression, index);
+                    expression = new SdslvIndexExpression(expression, index, Previous.Span);
+                }
+                else if (Match(SdslvTokenKind.KeywordWith))
+                {
+                    expression = ParseWithExpression(expression);
+                }
+                else if (Match(SdslvTokenKind.Question))
+                {
+                    expression = new SdslvTryPropagateExpression(expression, Previous.Span);
+                }
+                else if (Match(SdslvTokenKind.Bang))
+                {
+                    expression = new SdslvUnwrapExpression(expression, Previous.Span);
                 }
                 else
                 {
@@ -572,6 +659,30 @@ public static class SdslvParser
             }
 
             return expression;
+        }
+
+        private SdslvWithExpression ParseWithExpression(SdslvExpression baseExpression)
+        {
+            var updates = new List<SdslvWithUpdate>();
+            Expect(SdslvTokenKind.LeftBrace, "Expected '{' after with.");
+            while (!AtEnd && !Check(SdslvTokenKind.RightBrace))
+            {
+                var field = ParseIdentifier("Expected field name in with expression.") ?? "<error>";
+                if (!Match(SdslvTokenKind.Equals) && !Match(SdslvTokenKind.Colon))
+                {
+                    ErrorHere("Expected '=' or ':' after with field name.");
+                }
+
+                var value = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+                updates.Add(new SdslvWithUpdate(field, value));
+                if (!Match(SdslvTokenKind.Semicolon) && !Match(SdslvTokenKind.Comma))
+                {
+                    break;
+                }
+            }
+
+            Expect(SdslvTokenKind.RightBrace, "Expected '}' after with expression.");
+            return new SdslvWithExpression(baseExpression, updates);
         }
 
         private SdslvExpression? ParsePrimary()
@@ -583,6 +694,15 @@ public static class SdslvParser
             if (Match(SdslvTokenKind.BoolLiteral)) return new SdslvBoolLiteralExpression(bool.Parse(Previous.Text));
             if (Match(SdslvTokenKind.KeywordTrue)) return new SdslvBoolLiteralExpression(true);
             if (Match(SdslvTokenKind.KeywordFalse)) return new SdslvBoolLiteralExpression(false);
+            if (Match(SdslvTokenKind.LeftBracket))
+            {
+                var start = Previous.Span;
+                var elements = ParseExpressionList(SdslvTokenKind.RightBracket);
+                Expect(SdslvTokenKind.RightBracket, "Expected ']' after array literal.");
+                return new SdslvArrayLiteralExpression(elements, start with { End = Previous.Span.End });
+            }
+            if (Match(SdslvTokenKind.KeywordSwitch)) return ParseSwitchExpression();
+            if (Match(SdslvTokenKind.KeywordMatch)) return ParseMatchExpression();
             if (Match(SdslvTokenKind.LeftParen))
             {
                 var expression = ParseExpression();
@@ -594,20 +714,159 @@ public static class SdslvParser
             return null;
         }
 
+        private IReadOnlyList<SdslvExpression> ParseExpressionList(SdslvTokenKind terminator)
+        {
+            var expressions = new List<SdslvExpression>();
+            if (Check(terminator))
+            {
+                return expressions;
+            }
+
+            while (!AtEnd && !Check(terminator))
+            {
+                var expression = ParseExpression();
+                if (expression is not null)
+                {
+                    expressions.Add(expression);
+                }
+
+                if (Match(SdslvTokenKind.Comma))
+                {
+                    if (Check(terminator))
+                    {
+                        break;
+                    }
+
+                    continue;
+                }
+
+                break;
+            }
+
+            return expressions;
+        }
+
+        private SdslvSwitchExpression ParseSwitchExpression()
+        {
+            var start = Previous.Span;
+            SdslvExpression? subject = null;
+            if (!Check(SdslvTokenKind.LeftBrace))
+            {
+                subject = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+            }
+
+            Expect(SdslvTokenKind.LeftBrace, "Expected '{' after switch subject.");
+            var cases = new List<SdslvSwitchCase>();
+            SdslvExpression? elseValue = null;
+            while (!AtEnd && !Check(SdslvTokenKind.RightBrace))
+            {
+                if (Match(SdslvTokenKind.KeywordCase))
+                {
+                    var caseStart = Previous.Span;
+                    var condition = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+                    ExpectSwitchArmArrow("Expected '=>' or '->' after switch case.");
+                    var value = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+                    cases.Add(new SdslvSwitchCase(condition, value, caseStart));
+                    _ = Match(SdslvTokenKind.Semicolon) || Match(SdslvTokenKind.Comma);
+                    continue;
+                }
+
+                if (Match(SdslvTokenKind.KeywordElse))
+                {
+                    ExpectSwitchArmArrow("Expected '=>' or '->' after switch else.");
+                    elseValue = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+                    _ = Match(SdslvTokenKind.Semicolon) || Match(SdslvTokenKind.Comma);
+                    continue;
+                }
+
+                ErrorHere("Expected case or else in switch expression.");
+                Advance();
+            }
+
+            Expect(SdslvTokenKind.RightBrace, "Expected '}' after switch expression.");
+            if (elseValue is null)
+            {
+                ErrorHere("Switch expression requires else arm.");
+                elseValue = new SdslvIdentifierExpression("<error>");
+            }
+
+            return new SdslvSwitchExpression(subject, cases, elseValue, start with { End = Previous.Span.End });
+        }
+
+        private SdslvMatchExpression ParseMatchExpression()
+        {
+            var start = Previous.Span;
+            var subject = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+            Expect(SdslvTokenKind.LeftBrace, "Expected '{' after match subject.");
+            var arms = new List<SdslvMatchArm>();
+            while (!AtEnd && !Check(SdslvTokenKind.RightBrace))
+            {
+                var armStart = Current.Span;
+                var kind = ParseMatchArmKind();
+                ExpectSwitchArmArrow("Expected '=>' or '->' in match arm.");
+                var value = ParseExpression() ?? new SdslvIdentifierExpression("<error>");
+                arms.Add(new SdslvMatchArm(kind, value, armStart));
+                _ = Match(SdslvTokenKind.Semicolon) || Match(SdslvTokenKind.Comma);
+            }
+
+            Expect(SdslvTokenKind.RightBrace, "Expected '}' after match expression.");
+            return new SdslvMatchExpression(subject, arms, start with { End = Previous.Span.End });
+        }
+
+        private SdslvMatchArmKind ParseMatchArmKind()
+        {
+            if (Match(SdslvTokenKind.KeywordElse))
+            {
+                return new SdslvElseMatchArmKind();
+            }
+
+            if (Match(SdslvTokenKind.KeywordOk))
+            {
+                return new SdslvFallibleOkMatchArmKind(ParseFallibleBinding("ok"));
+            }
+
+            if (Match(SdslvTokenKind.KeywordErr))
+            {
+                return new SdslvFallibleErrMatchArmKind(ParseFallibleBinding("err"));
+            }
+
+            var path = ParsePath("Expected match arm path.") ?? new SdslvPath("<error>");
+            return new SdslvEnumVariantMatchArmKind(path);
+        }
+
+        private string ParseFallibleBinding(string name)
+        {
+            Expect(SdslvTokenKind.LeftParen, $"Expected '(' after {name}.");
+            var binding = ParseIdentifier($"Expected binding name in {name} arm.") ?? "<error>";
+            Expect(SdslvTokenKind.RightParen, $"Expected ')' after {name} binding.");
+            return binding;
+        }
+
+        private void ExpectSwitchArmArrow(string message)
+        {
+            if (!Match(SdslvTokenKind.FatArrow) && !Match(SdslvTokenKind.Arrow))
+            {
+                ErrorHere(message);
+            }
+        }
+
         private static bool TryGetBinaryOperator(SdslvTokenKind kind, out SdslvBinaryOperator op, out int precedence)
         {
             (op, precedence) = kind switch
             {
-                SdslvTokenKind.Star => (SdslvBinaryOperator.Multiply, 40),
-                SdslvTokenKind.Slash => (SdslvBinaryOperator.Divide, 40),
-                SdslvTokenKind.Plus => (SdslvBinaryOperator.Add, 30),
-                SdslvTokenKind.Minus => (SdslvBinaryOperator.Subtract, 30),
-                SdslvTokenKind.EqEq => (SdslvBinaryOperator.Equal, 20),
-                SdslvTokenKind.BangEq => (SdslvBinaryOperator.NotEqual, 20),
-                SdslvTokenKind.LeftAngle => (SdslvBinaryOperator.Less, 20),
-                SdslvTokenKind.LessEq => (SdslvBinaryOperator.LessEqual, 20),
-                SdslvTokenKind.RightAngle => (SdslvBinaryOperator.Greater, 20),
-                SdslvTokenKind.GreaterEq => (SdslvBinaryOperator.GreaterEqual, 20),
+                SdslvTokenKind.PipePipe => (SdslvBinaryOperator.LogicalOr, 10),
+                SdslvTokenKind.AmpAmp => (SdslvBinaryOperator.LogicalAnd, 20),
+                SdslvTokenKind.EqEq => (SdslvBinaryOperator.Equal, 30),
+                SdslvTokenKind.BangEq => (SdslvBinaryOperator.NotEqual, 30),
+                SdslvTokenKind.LeftAngle => (SdslvBinaryOperator.Less, 40),
+                SdslvTokenKind.LessEq => (SdslvBinaryOperator.LessEqual, 40),
+                SdslvTokenKind.RightAngle => (SdslvBinaryOperator.Greater, 40),
+                SdslvTokenKind.GreaterEq => (SdslvBinaryOperator.GreaterEqual, 40),
+                SdslvTokenKind.Plus => (SdslvBinaryOperator.Add, 50),
+                SdslvTokenKind.Minus => (SdslvBinaryOperator.Subtract, 50),
+                SdslvTokenKind.Star => (SdslvBinaryOperator.Multiply, 60),
+                SdslvTokenKind.Slash => (SdslvBinaryOperator.Divide, 60),
+                SdslvTokenKind.Percent => (SdslvBinaryOperator.Modulo, 60),
                 _ => (default, -1),
             };
             return precedence >= 0;
