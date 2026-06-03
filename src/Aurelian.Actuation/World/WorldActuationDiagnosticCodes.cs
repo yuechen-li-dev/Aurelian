@@ -16,4 +16,7 @@ public static class WorldActuationDiagnosticCodes
     public const string InvalidTransform = "AAW1012";
     public const string UnitNameNotSet = "AAW1013";
     public const string UnitTransformNotSet = "AAW1014";
+    public const string InvalidMeshRef = "AAW1015";
+    public const string InvalidMaterialRef = "AAW1016";
+    public const string RenderableMissing = "AAW1017";
 }

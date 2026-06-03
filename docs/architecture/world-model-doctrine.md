@@ -390,3 +390,24 @@ if/else, switch, dispatch tables, utility decisions, HFSMs, and LLM-assisted cho
 Aurelian uses agentic in the older/general sense: local units have capacity for autonomous state transition through declared inputs, outputs, and actuators.
 
 LLMs may assist ambiguous decisions, but agentic behavior does not require LLMs.
+
+## A20 renderable world data and extraction
+
+A20 adds a minimal renderable store to the world model without changing the doctrine boundary: renderable data is world data, but rendering contracts and backend dependencies are not world dependencies.
+
+Rules:
+
+- `Aurelian.World.Stores.Renderable2DStore` is an explicit typed store, not an ECS component manager.
+- `Renderable2DData` carries symbolic `WorldMeshRef` and `WorldMaterialRef` values only.
+- These symbolic refs are strings owned by the world layer for now; they are not asset handles, shader handles, backend handles, or `Aurelian.Rendering.Contracts` refs.
+- `WorldDataSnapshot` may include renderable data for units, including invisible renderables, because extraction decides what becomes a render item.
+- `Aurelian.Runtime.Rendering.WorldRenderSnapshotExtractor` is the composition-layer bridge that maps resolved world data into `RenderSnapshot` DTOs.
+- The M0 extractor creates a default symbolic camera and maps visible renderable units to `RenderItem2D` records; real camera stores and scene systems remain deferred.
+
+The validated headless path is now:
+
+```text
+WorldDataDocument -> RenderSnapshot -> RenderCommandPlan -> NullRenderer
+```
+
+This path proves the data flow while preserving the no-GPU, no-window, no-assets, and no-shaders boundaries.

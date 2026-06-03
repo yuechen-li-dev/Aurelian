@@ -8,4 +8,5 @@ public sealed record UnitDataSnapshot(
     UnitLogicRef? Logic,
     UnitName? Name,
     Transform2 Transform,
+    Renderable2DData? Renderable,
     IReadOnlyList<UnitId> ImmediateChildren);

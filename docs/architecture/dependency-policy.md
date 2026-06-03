@@ -116,12 +116,12 @@ If the compiler cannot see the dependency, Aurelian should distrust it.
 ## 7. Dependency layering rules
 
 - `Aurelian.Core` should stay minimal and dependency-light.
-- `Aurelian.World` must not depend on rendering, assets, shaders, Dominatus, physics, navigation, or UI.
+- `Aurelian.World` must not depend on rendering, assets, shaders, Dominatus, physics, navigation, or UI. World-owned renderable data is allowed only as symbolic world refs such as mesh/material strings, not rendering-contract refs or asset/shader handles.
 - `Aurelian.Rendering.Contracts` contains renderer-independent DTOs only: render snapshots, items, cameras, resource refs, command plans, draw items, pass plans, symbolic pipeline/shader/target refs, statuses, reasons, diagnostics, and contract-local snapshot-to-plan assembly. It must not depend on world, assets, shaders, graphics/windowing packages, GPU handles, or backend object models.
 - `Aurelian.Rendering.Null` is the first backend implementation boundary. It may depend on `Aurelian.Rendering.Contracts`, consumes command plans, and returns deterministic headless traces/results, but it must not introduce GPU/windowing packages, world, assets, shaders, backend-native handles, images, or windows.
-- Future world-to-render extraction should be added only when the dependency boundary is real; do not split out extraction solely to make smaller files or fake-clean architecture.
+- World-to-render extraction lives in `Aurelian.Runtime.Rendering` because runtime composition may reference both `Aurelian.World` and `Aurelian.Rendering.Contracts`; no separate extraction project is needed until the boundary becomes heavier.
 - `Aurelian.Actuation` may depend on world contracts for world mutation.
-- `Aurelian.Runtime` integrates Dominatus and dispatch.
+- `Aurelian.Runtime` integrates Dominatus, dispatch, and world-to-render snapshot extraction. It may reference `Aurelian.Rendering.Contracts`, but production runtime must not reference `Aurelian.Rendering.Null`.
 - Backend packages may depend on external libraries.
 - Tools/editor packages may depend on UI/windowing libraries.
 - No dependency should create reverse references into core layers.
@@ -157,7 +157,7 @@ Examples:
 
 - World typed data stores should stay library-free for now.
 - Render snapshot and command-plan contracts are DTO-only in `Aurelian.Rendering.Contracts`.
-- The null renderer is implemented in `Aurelian.Rendering.Null` as a headless backend over command plans; world extraction, GPU command execution, and Silk.NET/Vortice-backed rendering remain future work.
+- The null renderer is implemented in `Aurelian.Rendering.Null` as a headless backend over command plans. World-to-render extraction now exists in `Aurelian.Runtime.Rendering`, so `WorldDataDocument -> RenderSnapshot -> RenderCommandPlan -> NullRenderer` is testable headlessly; GPU command execution and Silk.NET/Vortice-backed rendering remain future work.
 - Visual render backends can later use Silk.NET/Vortice behind `Aurelian.Rendering.*`.
 - Physics can later use BEPU behind `Aurelian.Physics.*`.
 - Navigation can later use DotRecast behind `Aurelian.Navigation.*`.

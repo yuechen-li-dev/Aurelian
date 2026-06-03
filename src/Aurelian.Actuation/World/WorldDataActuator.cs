@@ -103,6 +103,62 @@ public static class WorldDataActuator
         return Applied(document.WithTransforms(document.Transforms.Remove(request.UnitId)));
     }
 
+    public static WorldActuationResult<WorldDataDocument> Apply(
+        WorldDataDocument document,
+        SetRenderable2DRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!document.World.Units.ContainsKey(request.UnitId))
+        {
+            return Rejected(document, Diagnostic(
+                WorldActuationDiagnosticCodes.UnitNotFound,
+                $"Unit '{request.UnitId}' was not found."));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Renderable.Mesh.Value))
+        {
+            return Rejected(document, Diagnostic(
+                WorldActuationDiagnosticCodes.InvalidMeshRef,
+                $"Unit '{request.UnitId}' cannot be assigned an empty mesh reference."));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Renderable.Material.Value))
+        {
+            return Rejected(document, Diagnostic(
+                WorldActuationDiagnosticCodes.InvalidMaterialRef,
+                $"Unit '{request.UnitId}' cannot be assigned an empty material reference."));
+        }
+
+        return Applied(document.WithRenderables(document.Renderables.Set(request.UnitId, request.Renderable)));
+    }
+
+    public static WorldActuationResult<WorldDataDocument> Apply(
+        WorldDataDocument document,
+        RemoveRenderable2DRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!document.World.Units.ContainsKey(request.UnitId))
+        {
+            return Rejected(document, Diagnostic(
+                WorldActuationDiagnosticCodes.UnitNotFound,
+                $"Unit '{request.UnitId}' was not found."));
+        }
+
+        if (!document.Renderables.Renderables.ContainsKey(request.UnitId))
+        {
+            return NoOp(document, new WorldActuationDiagnostic(
+                WorldActuationDiagnosticCodes.RenderableMissing,
+                WorldActuationDiagnosticSeverity.Info,
+                $"Unit '{request.UnitId}' has no renderable to remove."));
+        }
+
+        return Applied(document.WithRenderables(document.Renderables.Remove(request.UnitId)));
+    }
+
     private static bool IsFinite(Transform2 transform) =>
         double.IsFinite(transform.X)
         && double.IsFinite(transform.Y)
