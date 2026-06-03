@@ -12,4 +12,8 @@ public static class WorldActuationDiagnosticCodes
     public const string InvalidMutationWouldBreakWorld = "AAW1008";
     public const string DuplicateChildSlot = "AAW1009";
     public const string CannotDestroyUnitWithChildren = "AAW1010";
+    public const string InvalidUnitName = "AAW1011";
+    public const string InvalidTransform = "AAW1012";
+    public const string UnitNameNotSet = "AAW1013";
+    public const string UnitTransformNotSet = "AAW1014";
 }
