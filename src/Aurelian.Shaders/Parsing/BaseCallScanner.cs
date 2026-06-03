@@ -1,7 +1,7 @@
-using StriV.ShaderPipeline.Ast;
-using StriV.ShaderPipeline.Lexing;
+using Aurelian.Shaders.Ast;
+using Aurelian.Shaders.Lexing;
 
-namespace StriV.ShaderPipeline.Parsing;
+namespace Aurelian.Shaders.Parsing;
 
 internal static class BaseCallScanner
 {

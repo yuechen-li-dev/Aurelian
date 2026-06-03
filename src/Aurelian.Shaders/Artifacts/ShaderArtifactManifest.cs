@@ -1,6 +1,6 @@
-using StriV.ShaderPipeline.Diagnostics;
+using Aurelian.Shaders.Diagnostics;
 
-namespace StriV.ShaderPipeline.Artifacts;
+namespace Aurelian.Shaders.Artifacts;
 
 public sealed class ShaderArtifactManifest
 {

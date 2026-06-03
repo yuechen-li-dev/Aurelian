@@ -1,7 +1,7 @@
-using StriV.ShaderPipeline.Diagnostics;
-using StriV.ShaderPipeline.Lexing;
+using Aurelian.Shaders.Diagnostics;
+using Aurelian.Shaders.Lexing;
 
-namespace StriV.ShaderPipeline.Ast;
+namespace Aurelian.Shaders.Ast;
 
 public sealed record HlslDocument(string Source, IReadOnlyList<HlslFunction> Functions);
 public sealed record HlslFunction(string Signature, string Body);

@@ -1,4 +1,4 @@
-namespace StriV.ShaderPipeline.Lexing;
+namespace Aurelian.Shaders.Lexing;
 
 public enum TokenKind
 {

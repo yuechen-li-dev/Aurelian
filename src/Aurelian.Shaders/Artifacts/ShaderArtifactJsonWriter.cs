@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace StriV.ShaderPipeline.Artifacts;
+namespace Aurelian.Shaders.Artifacts;
 
 public static class ShaderArtifactJsonWriter
 {

@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
-using StriV.ShaderPipeline.Ast;
-using StriV.ShaderPipeline.Diagnostics;
-using StriV.ShaderPipeline.Lexing;
+using Aurelian.Shaders.Ast;
+using Aurelian.Shaders.Diagnostics;
+using Aurelian.Shaders.Lexing;
 
-namespace StriV.ShaderPipeline.Parsing;
+namespace Aurelian.Shaders.Parsing;
 
 public sealed class ShaderParser
 {

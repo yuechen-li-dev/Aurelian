@@ -1,8 +1,8 @@
 using System.Text;
-using StriV.ShaderPipeline.Ast;
-using StriV.ShaderPipeline.Diagnostics;
+using Aurelian.Shaders.Ast;
+using Aurelian.Shaders.Diagnostics;
 
-namespace StriV.ShaderPipeline.Lowering;
+namespace Aurelian.Shaders.Lowering;
 
 public sealed record StreamBinding(string Type, string Name, string Semantic, int Line, int Column);
 public sealed record StreamLayout(IReadOnlyList<StreamBinding> Bindings, IReadOnlyList<Diagnostic> Diagnostics);
