@@ -1,6 +1,6 @@
-using StriV.ShaderPipeline.Diagnostics;
+using Aurelian.Shaders.Diagnostics;
 
-namespace StriV.ShaderPipeline.Parsing;
+namespace Aurelian.Shaders.Parsing;
 
 public sealed record ParseResult<T>(T? Document, IReadOnlyList<Diagnostic> Diagnostics)
 {

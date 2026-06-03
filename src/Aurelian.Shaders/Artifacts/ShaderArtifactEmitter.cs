@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
-using StriV.ShaderPipeline.Diagnostics;
-using StriV.ShaderPipeline.Lowering;
-using StriV.ShaderPipeline.Parsing;
+using Aurelian.Shaders.Diagnostics;
+using Aurelian.Shaders.Lowering;
+using Aurelian.Shaders.Parsing;
 
-namespace StriV.ShaderPipeline.Artifacts;
+namespace Aurelian.Shaders.Artifacts;
 
 public sealed class ShaderArtifactEmitter
 {

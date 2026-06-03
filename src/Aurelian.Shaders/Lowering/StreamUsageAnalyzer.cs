@@ -1,8 +1,8 @@
-using StriV.ShaderPipeline.Ast;
-using StriV.ShaderPipeline.Diagnostics;
-using StriV.ShaderPipeline.Lexing;
+using Aurelian.Shaders.Ast;
+using Aurelian.Shaders.Diagnostics;
+using Aurelian.Shaders.Lexing;
 
-namespace StriV.ShaderPipeline.Lowering;
+namespace Aurelian.Shaders.Lowering;
 
 public enum StreamAccessKind { Read, Write, ReadWrite, Unknown }
 public enum StageKind { Vertex, Pixel, Unknown }

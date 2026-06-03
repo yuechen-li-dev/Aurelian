@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace StriV.ShaderPipeline.Lexing;
+namespace Aurelian.Shaders.Lexing;
 
 public sealed class ShaderLexer
 {

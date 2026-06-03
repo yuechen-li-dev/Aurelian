@@ -1,4 +1,4 @@
-namespace StriV.ShaderPipeline.Diagnostics;
+namespace Aurelian.Shaders.Diagnostics;
 
 public sealed record Diagnostic(string Code, string Message, int Line, int Column)
 {

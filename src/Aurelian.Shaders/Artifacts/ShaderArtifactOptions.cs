@@ -1,4 +1,4 @@
-namespace StriV.ShaderPipeline.Artifacts;
+namespace Aurelian.Shaders.Artifacts;
 
 public sealed class ShaderArtifactOptions
 {
