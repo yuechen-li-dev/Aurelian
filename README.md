@@ -6,13 +6,13 @@ Aurelian is a greenfield C# engine/runtime project created after the Stri-V resc
 
 Aurelian is currently in pre-MVP module bring-up. The repository contains a clean solution skeleton, strict build discipline, architecture notes, smoke tests, the first vendored runtime dependency (Dominatus), and the linked `Aurelian.Shaders`, `Aurelian.Assets`, and `Aurelian.AssetTool` modules.
 
-A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aurelian.Shaders`. A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`. A5 added the first token-driven SDSL-V parser M0 path under `Aurelian.Shaders.Language`. A6 expanded the new parser to M1 statement/expression syntax and added an explicit WyrmCoil ↔ Aurelian SDSL-V compatibility matrix. A7 added validation M0, A8 added HLSL emission M0, A9 added a new `Aurelian.Shaders.Language.Artifacts` manifest M0 over the source -> parse -> validate -> HLSL emit -> artifact/manifest path, and A10 added optional DXC validation M0 for generated HLSL artifacts when a DXC executable is available. A11 converted the remaining carried-over asset projects into `Aurelian.Assets` and `Aurelian.AssetTool`, while the early asset pipeline remains schema-convergence work and the legacy carried-over shader parser, AST, lowerer, artifact emitter, mixin/effect, and base-shader behavior remain temporarily in place.
+A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aurelian.Shaders`. A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`. A5 added the first token-driven SDSL-V parser M0 path under `Aurelian.Shaders.Language`. A6 expanded the new parser to M1 statement/expression syntax and added an explicit WyrmCoil ↔ Aurelian SDSL-V compatibility matrix. A7 added validation M0, A8 added HLSL emission M0, A9 added a new `Aurelian.Shaders.Language.Artifacts` manifest M0 over the source -> parse -> validate -> HLSL emit -> artifact/manifest path, and A10 added optional DXC validation M0 for generated HLSL artifacts when a DXC executable is available. A11 converted the remaining carried-over asset projects into `Aurelian.Assets` and `Aurelian.AssetTool`. A12 added the Aurelian World Model Doctrine, making locality of change the primary design law and defining the future world implementation around data, composition, logic, components as local composition units, `WorldUnit` locality boundaries, Dominatus orchestration, actuator-owned mutation, and no ECS processor architecture. A13 should be World Unit M0, while the early asset pipeline remains schema-convergence work and the legacy carried-over shader parser, AST, lowerer, artifact emitter, mixin/effect, and base-shader behavior remain temporarily in place.
 
 ## What Aurelian is
 
 - A greenfield C# engine/runtime.
 - A Dominatus-native runtime spine beginning in A1, with Dominatus vendored under `vendor/Dominatus/`.
-- An explicit data-world engine design.
+- An explicit data-world engine design based on data, composition, logic, and locality of change.
 - A typed lifecycle, actuator-owned side-effect, render-snapshot, and command-plan oriented architecture.
 - A test-first codebase with nullable reference types and warnings-as-errors for Aurelian-owned projects.
 - The home of `Aurelian.Shaders`, an Aurelian-owned shader module with a new WyrmCoil-inspired SDSL-V AST contract, token-driven parser/validator/HLSL emitter paths, a deterministic SDSL-V artifact manifest M0, optional DXC validation M0, an explicit compatibility matrix, and a temporarily preserved carried-over legacy pipeline.
@@ -22,11 +22,17 @@ A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aure
 ## What Aurelian is not
 
 - It is not a Stride runtime fork.
-- It does not use the Stride processor architecture as its runtime core.
+- It does not use the Stride processor architecture or ECS processors as its runtime core.
 - It does not use the Stride asset system as its asset foundation.
 - It is not editor-first.
 - It does not contain renderer, windowing, triangle, Machina integration, WyrmCoil integration, or remaining unconverted Stri-V salvage projects.
 - It does not reference or compile WyrmCoil code; WyrmCoil remains reference-only, with SDSL-V semantics compared through an explicit compatibility matrix rather than blindly copied into production code.
+
+## World model doctrine
+
+A12 adds `docs/architecture/world-model-doctrine.md` as the design boundary for future `Aurelian.World` implementation. The doctrine states that locality of change is the primary design law, uses data/composition/logic as the uniform decomposition for worlds, scenes, rooms, NPCs, documents, webpages, UI nodes, shader modules, and asset manifests, and defines an Aurelian component as a reusable local composition unit rather than a passive mutable data bag processed globally.
+
+The next implementation milestone should be A13 — World Unit M0: IDs, descriptors, composition, a simple resolver, deterministic snapshots/queries, and tests for locality boundaries. A13 should not introduce a full ECS, processors, an entity manager, renderer integration, asset integration, physics, LLM calls, or deep inheritance.
 
 ## Asset modules
 
