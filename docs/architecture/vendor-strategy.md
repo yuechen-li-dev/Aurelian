@@ -40,9 +40,9 @@ Dominatus was copied from `https://github.com/yuechen-li-dev/Dominatus/` at comm
 
 A3 converted the carried-over `src/StriV.ShaderPipeline/` project identity into the Aurelian-owned `src/Aurelian.Shaders/` module and linked it in `Aurelian.slnx` with matching smoke tests under `tests/Aurelian.Shaders.Tests/`.
 
-This conversion is identity cleanup only. `Aurelian.Shaders` still preserves the carried-over scaffold behavior and has not yet converged parser, AST, lowering, or artifact semantics to WyrmCoil SDSL-V. A4 is responsible for AST convergence toward the WyrmCoil SDSL-V module/declaration/type model.
+A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`. The legacy carried-over AST/parser/lowerer and artifact emitter remain temporarily in place and keep their existing behavior until parser and lowerer convergence milestones replace them deliberately. A5 will begin parser convergence for the new AST.
 
-`Aurelian.Shaders` must not add project references to `CodeReferences/*`, Stride, Machina, WyrmCoil, Copeland, or the remaining Stri-V salvage projects.
+WyrmCoil remains reference-only: Aurelian copies language semantics conceptually, not by referencing or compiling WyrmCoil code. `Aurelian.Shaders` must not add project references to `CodeReferences/*`, Stride, Machina, WyrmCoil, Copeland, or the remaining Stri-V salvage projects.
 
 ## Stri-V salvage boundary
 
