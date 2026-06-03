@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-WyrmCoil SDSL-V remains the reference and semantic inspiration for Aurelian SDSL-V, especially for the Oct-shaped module/declaration/statement/expression/validation direction established during A2 through A9.
+WyrmCoil SDSL-V remains the reference and semantic inspiration for Aurelian SDSL-V, especially for the Oct-shaped module/declaration/statement/expression/validation direction established during A2 through A10.
 
 Aurelian SDSL-V is now its own production C# implementation under `Aurelian.Shaders.Language`. The matrix below tracks where Aurelian currently matches WyrmCoil, where it intentionally differs, where features are deferred, and where WyrmCoil concepts are not applicable to Aurelian.
 
@@ -55,9 +55,9 @@ This document exists to avoid accidental semantic drift while also avoiding blin
 | Fallibility/try/unwrap | Reference supports postfix `?`/`!` and fallible match arms. | M1 supports prefix `try expr`, prefix `unwrap expr`, and postfix `?`/`!`. | Intentionally different | Prefix forms are Aurelian's documented M1 syntax; postfix forms are retained as compatibility parse shapes. |
 | Diagnostics | Reference parser/validator/emitter diagnostics. | C# lex/parse/validation/emission diagnostics returned in result objects and combined in artifact M0. | Compatible | A7 adds stable validation codes `SV1001`, `SV1002`, `SV1101`, `SV1201`, `SV1301`, `SV1302`, `SV1401`, `SV1402`, `SV1501`, and `SV1901`; A8 adds HLSL M0 emission codes `SV3001` through `SV3004` for unsupported declarations/statements/expressions/types. |
 | Validation | Reference includes validation. | A7 structural validation M0 over the new AST is implemented. | Compatible | Covers duplicates, basic type-reference validity, positive array lengths, and same-scope duplicate locals. It intentionally defers full type checking, interface satisfaction, flow checking, and expression typing. |
-| HLSL emission | Reference includes emission path. | New AST HLSL M0 emitter exists under `Aurelian.Shaders.Language.Emission.Hlsl`; legacy emitter remains unchanged. | Compatible | A8 emits records/streams as structs, shader methods/stages as functions, and basic let/assignment/return/expression/empty/if/for statements plus basic expressions. Unsupported constructs produce diagnostics. No DXC/SPIR-V execution yet. |
-| DXC/SPIR-V runner | Reference has runner/integration concepts. | Not implemented. | Deferred | Out of parser scope. |
-| Artifact manifests | Reference has artifact concepts. | New AST artifact manifest M0 exists under `Aurelian.Shaders.Language.Artifacts`; legacy artifact path remains unchanged. | Compatible | A9 packages source identity, SHA-256 source hash, HLSL, parse/validation/emission diagnostics, success state, and heuristic stage/profile entry point metadata. JSON includes HLSL for M0 and may split files later. No DXC/SPIR-V or asset/TOML bridge yet. |
+| HLSL emission | Reference includes emission path. | New AST HLSL M0 emitter exists under `Aurelian.Shaders.Language.Emission.Hlsl`; legacy emitter remains unchanged. | Compatible | A8 emits records/streams as structs, shader methods/stages as functions, and basic let/assignment/return/expression/empty/if/for statements plus basic expressions. Unsupported constructs produce diagnostics. A10 can optionally pass emitted HLSL to DXC for external validation when DXC is available. |
+| DXC/SPIR-V runner | Reference has runner/integration concepts. | Optional HLSL-only DXC validation M0 exists under `Aurelian.Shaders.Language.External.Dxc`; SPIR-V output is not implemented. | Partial | A10 discovers DXC via `AURELIAN_DXC`, `dxc`, then `dxc.exe` on `PATH`; normal tests skip cleanly if missing. The validator checks syntax/profile/entry point combinations only and does not require Vulkan SDK or persistent compiled artifacts. |
+| Artifact manifests | Reference has artifact concepts. | New AST artifact manifest M0 exists under `Aurelian.Shaders.Language.Artifacts`; legacy artifact path remains unchanged. | Compatible | A9 packages source identity, SHA-256 source hash, HLSL, parse/validation/emission diagnostics, success state, and heuristic stage/profile entry point metadata. JSON includes HLSL for M0 and may split files later. Optional DXC HLSL validation exists in A10; no SPIR-V/Vulkan or asset/TOML bridge yet. |
 | Test modules/runner | Reference includes rich tests and prototype `.sdslvtest` support. | xUnit parser/AST/validation/emission/artifact tests in Aurelian, including the checked-in `tests/Aurelian.Shaders.Tests/Fixtures/Sdslv/smoke_triangle.sdslv` source fixture. | Intentionally different | A9 still intentionally uses ordinary xUnit tests only; `.sdslvtest` and CPU evaluator work remain deferred. |
 | mixins | Not a native WyrmCoil SDSL-V production target for Aurelian. | Not native Aurelian SDSL-V. | Not applicable | Old Stride mixins are intentionally excluded. |
 | Old Stride `.sdsl` compatibility | Historical reference only. | Not supported as native Aurelian SDSL-V. | Not applicable | No old Stride effect/base-shader inheritance model. |
@@ -70,8 +70,9 @@ This document exists to avoid accidental semantic drift while also avoiding blin
 - **Utility syntax:** Utility expressions are deferred in parser M1. The existing AST records preserve a future shape for ranked cases, guards, scores, and options.
 - **Fallibility syntax:** Aurelian M1 documents prefix `try expression` and `unwrap expression`; postfix `expression?` and `expression!` are parsed as compatibility shapes.
 - **Validation M0:** Aurelian A7 validates structural AST invariants and type-reference names only. It is not a full shader type checker and does not evaluate expression behavior.
-- **HLSL emission M0:** Aurelian A8 emits deterministic HLSL from the new AST after callers explicitly parse and validate. It covers the smoke fixture shape and reports diagnostics for unsupported constructs rather than invoking DXC/SPIR-V or a renderer.
+- **HLSL emission M0:** Aurelian A8 emits deterministic HLSL from the new AST after callers explicitly parse and validate. It covers the smoke fixture shape and reports diagnostics for unsupported constructs. A10 may optionally invoke DXC after emission for external HLSL validation only; the emitter itself still does not invoke DXC/SPIR-V or a renderer.
 - **Artifact manifest M0:** Aurelian A9 packages `source -> parse -> validate -> HLSL emit -> artifact/manifest` results into deterministic in-memory artifacts and JSON. The manifest includes HLSL for M0 simplicity, while later asset work may split generated outputs into separate files. Stage/profile inference is heuristic: entry point names or parsed stage labels map to vertex/pixel/compute only by simple naming rules.
+- **Optional DXC validation M0:** Aurelian A10 treats DXC as an optional external validator for generated HLSL. `AURELIAN_DXC` may point to an executable; otherwise discovery probes `dxc` and `dxc.exe` on `PATH`. Missing DXC, empty HLSL, or missing entry points return skipped validation statuses rather than failing normal tests. No SPIR-V, Vulkan, renderer, or asset/TOML path is implied.
 
 ## 5. Known intentional divergences
 
@@ -87,8 +88,8 @@ Aurelian may support `.sdslvtest` files analogous to `.octest` by porting the Oc
 
 ## 7. Next compatibility work
 
-- Optional DXC validation M0 after artifact boundaries are explicit.
-- Shader asset manifest bridge M0 after DXC validation decisions are clear.
+- Shader asset manifest bridge M0 after optional DXC validation boundaries are explicit.
+- Future artifact manifest file output M1 for splitting generated HLSL from JSON when needed.
 - Parser/validation M2 for flow, utility, and any remaining fallibility details.
 - Future artifact schema revisions that may split HLSL out of JSON.
 - Shader fixtures that exercise accepted Aurelian syntax and documented WyrmCoil compatibility cases.
