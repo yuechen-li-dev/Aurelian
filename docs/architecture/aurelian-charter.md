@@ -13,6 +13,7 @@ Aurelian is a greenfield C# engine/runtime created after the Stri-V rescue effor
 - Asset work should move toward TOML/manifest-based assets.
 - Shader work should move toward an SDSL-V-style compiler pipeline when that phase begins.
 - Renderer/HAL selection is deferred until later MVP phases.
+- Dependency adoption follows `docs/architecture/dependency-policy.md`: Aurelian uses useful libraries pragmatically behind Aurelian-owned contracts while keeping the core explicit, NativeAOT-oriented, and reflection-free by default.
 
 ## Non-goals
 
@@ -22,7 +23,8 @@ Aurelian is a greenfield C# engine/runtime created after the Stri-V rescue effor
 - No renderer implementation in A1.
 - No window creation or triangle rendering in A1.
 - No Machina, WyrmCoil, Stri-V salvage, graphics package, or windowing package linkage in A1.
+- No dependency capture: external libraries must not replace Aurelian-owned world, runtime, actuation, render snapshot, asset, or shader contracts.
 
 ## Current spine status
 
-A1 establishes only a minimal Dominatus runtime smoke path. The smoke constructs a tiny Dominatus world, graph, agent, and actuation host, ticks once deterministically, and observes an immediate Dominatus actuation completion payload. It is not the final runtime API and does not add renderer, asset, shader, windowing, or world-store architecture.
+A1 establishes only a minimal Dominatus runtime smoke path. The smoke constructs a tiny Dominatus world, graph, agent, and actuation host, ticks once deterministically, and observes an immediate Dominatus actuation completion payload. It is not the final runtime API and does not add renderer, asset, shader, windowing, or world-store architecture. A15 adds the dependency policy before later implementation proceeds to world stores, actuation, render contracts, and backend integration under explicit library boundaries.
