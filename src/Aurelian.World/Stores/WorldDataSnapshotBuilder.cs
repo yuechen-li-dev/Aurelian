@@ -29,6 +29,7 @@ public static class WorldDataSnapshotBuilder
     {
         ResolvedWorldUnit unit = world.Units[id];
         document.Names.TryGet(id, out UnitName? name);
+        document.Renderables.TryGet(id, out Renderable2DData? renderable);
 
         return new UnitDataSnapshot(
             unit.Id,
@@ -36,6 +37,7 @@ public static class WorldDataSnapshotBuilder
             unit.Logic,
             name,
             document.Transforms.GetOrIdentity(id),
+            renderable,
             world.GetImmediateChildren(id));
     }
 }
