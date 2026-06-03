@@ -224,7 +224,7 @@ This keeps responsibilities separate:
 
 ## 10. Actuator relationship
 
-Actuators are mutation boundaries. An actuator accepts a typed request and returns a typed result/outcome. It names side effects rather than allowing arbitrary mutation across boundaries.
+Actuators are mutation boundaries. An actuator accepts a typed request and returns a typed result/outcome. It names side effects rather than allowing arbitrary mutation across boundaries. A14 makes the first such boundary concrete under `Aurelian.Actuation.World`: spawn, destroy, attach, detach, and replace-descriptor requests operate over `WorldDocument` values and return `WorldActuationResult` statuses and diagnostics.
 
 Side effects should be named, including:
 
@@ -237,7 +237,7 @@ Side effects should be named, including:
 - load asset;
 - compile shader.
 
-Actuators preserve locality by preventing random mutation across boundaries. A parent unit, behavior policy, renderer, or asset tool should not casually mutate arbitrary world internals. Instead, code requests a named effect and receives a structured outcome that can be tested, logged, rejected, or replayed.
+Actuators preserve locality by preventing random mutation across boundaries. A parent unit, behavior policy, renderer, or asset tool should not casually mutate arbitrary world internals. Instead, code requests a named effect and receives a structured outcome that can be tested, logged, rejected, or replayed. For world unit M0, rejected and no-op results keep the original document; applied results return a new `WorldDocument` that has been validated by `WorldUnitResolver`.
 
 ## 11. Render extraction relationship
 
@@ -339,6 +339,14 @@ A13 M0 intentionally does not include:
 - deep inheritance system.
 
 A13 makes the smallest possible world model real: IDs, descriptors, immediate-only composition, a resolver, resolved-world query/snapshot shape, diagnostics, and tests. `ResolvedWorld` is the M0 snapshot/query object; it exposes deterministic pre-order traversal, immediate child queries, transitive descendant queries, parent lookup, and unit lookup. Behavior runtime, Dominatus integration, actuators, renderer integration, asset integration, physics, editor workflows, and blackboards remain future work. Blackboards remain logic/runtime state, not durable world data.
+
+A14 adds the first actuator contracts over this model:
+
+```text
+A14 — World actuator request/result contracts M0
+```
+
+A14 lives in `Aurelian.Actuation.World`, not `Aurelian.World`. It adds pure request records for spawning units, destroying leaf units, attaching immediate children, detaching immediate children, and replacing descriptors; it adds status/diagnostic/result contracts; and it applies valid mutations by creating new world documents rather than mutating the input document in place. Applied mutations are resolved through `WorldUnitResolver` before they are returned. Invalid mutations return deterministic diagnostics such as duplicate unit, missing parent/child, duplicate child/slot, root destruction, child-bearing destruction, or resolver-invalid mutation. Dominatus bridges, typed data stores, behavior runtime, blackboards, renderer, assets, shaders, physics, editor workflows, and ECS managers/processors remain outside A14.
 
 ## 15. Anti-goals
 
