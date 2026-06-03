@@ -23,7 +23,7 @@
 - **A20 — World-to-render snapshot extraction M0:** connect world data stores to renderer-independent snapshots without adding backend dependencies to world. **Completed.**
 - **A21 — First graphics backend decision audit:** choose the first visual backend direction and document the Vulkan intent-port plan. Silk.NET Vulkan/windowing is the first backend path, Vortice is deferred, Stride.Graphics remains reference-only, and the plant/controller model is preserved. **Completed.**
 - **A22 — Aurelian.Graphics scaffold:** create `Aurelian.Graphics` and `tests/Aurelian.Graphics.Tests`, add Silk.NET Vulkan/windowing package references, and prove package visibility without creating a Vulkan instance, window, surface, device, swapchain, command buffers, renderer, resources, or plant registry. **Completed.**
-- **A23 — PlantContext + PlantRegistry M0:** define `PlantId`, `PlantContext`, `PlantRegistry`, and graphics diagnostics DTOs for one fixed plant descriptor/context without native Vulkan device creation unless absolutely required for shape tests.
+- **A23 — PlantContext + PlantRegistry M0:** define `PlantId`, `PlantContext`, `PlantRegistry`, plant selection, and graphics diagnostics DTOs for one fixed native-free plant descriptor/context. `PlantId.Zero` is the single-GPU M0 plant, registry order is deterministic, there is no global graphics singleton, and Vulkan instance/device/window/surface creation remains A24. **Completed.**
 
 ## Shader pipeline status
 
