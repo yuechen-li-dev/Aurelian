@@ -6,5 +6,6 @@
     <ProjectReference Include="../Aurelian.Core/Aurelian.Core.csproj" />
     <ProjectReference Include="../Aurelian.Actuation/Aurelian.Actuation.csproj" />
     <ProjectReference Include="../Aurelian.World/Aurelian.World.csproj" />
+    <ProjectReference Include="..\..\vendor\Dominatus\src\Dominatus.Core\Dominatus.Core.csproj" />
   </ItemGroup>
 </Project>
