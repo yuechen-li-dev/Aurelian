@@ -76,6 +76,7 @@ public sealed record SdslvMatchArm(
 public abstract record SdslvMatchArmKind;
 
 public sealed record SdslvEnumVariantMatchArmKind(SdslvPath VariantPath) : SdslvMatchArmKind;
+public sealed record SdslvElseMatchArmKind : SdslvMatchArmKind;
 public sealed record SdslvFallibleOkMatchArmKind(string Binding) : SdslvMatchArmKind;
 public sealed record SdslvFallibleErrMatchArmKind(string Binding) : SdslvMatchArmKind;
 
@@ -98,6 +99,9 @@ public enum SdslvBinaryOperator
     Subtract,
     Multiply,
     Divide,
+    Modulo,
+    LogicalOr,
+    LogicalAnd,
     Equal,
     NotEqual,
     Less,
@@ -109,4 +113,5 @@ public enum SdslvBinaryOperator
 public enum SdslvUnaryOperator
 {
     Negate,
+    Not,
 }
