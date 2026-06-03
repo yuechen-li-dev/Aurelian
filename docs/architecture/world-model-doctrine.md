@@ -88,7 +88,7 @@ The conceptual primitive for the world model is:
 WorldUnit
 ```
 
-`WorldUnit` does not need to be implemented in this milestone. It names the boundary Aurelian should implement next.
+`WorldUnit` is now represented at M0 by descriptors and resolved units under `Aurelian.World.Units`. M0 keeps the boundary small: identity, kind, immediate composition, opaque logic references, resolver output, and deterministic hierarchy queries.
 
 A `WorldUnit` is a locality boundary:
 
@@ -306,13 +306,13 @@ Aurelian should not require every tiny file to have all sections. Small identifi
 
 ## 14. M0 implementation implications
 
-The recommended first world implementation milestone is:
+The first world implementation milestone is now:
 
 ```text
 A13 — World Unit M0
 ```
 
-M0 should include:
+A13 M0 includes:
 
 - `UnitId`;
 - `UnitKindId`;
@@ -326,7 +326,7 @@ M0 should include:
 - deterministic snapshot/query of units and children;
 - tests for locality boundaries and shallow composition.
 
-M0 should not include:
+A13 M0 intentionally does not include:
 
 - full ECS;
 - processors;
@@ -338,7 +338,7 @@ M0 should not include:
 - LLM calls;
 - deep inheritance system.
 
-The goal of A13 should be to make the smallest possible world model real: IDs, descriptors, composition, resolver, snapshot, and tests. It should not implement behavior runtime, renderer integration, asset integration, physics, or editor workflows.
+A13 makes the smallest possible world model real: IDs, descriptors, immediate-only composition, a resolver, resolved-world query/snapshot shape, diagnostics, and tests. `ResolvedWorld` is the M0 snapshot/query object; it exposes deterministic pre-order traversal, immediate child queries, transitive descendant queries, parent lookup, and unit lookup. Behavior runtime, Dominatus integration, actuators, renderer integration, asset integration, physics, editor workflows, and blackboards remain future work. Blackboards remain logic/runtime state, not durable world data.
 
 ## 15. Anti-goals
 
