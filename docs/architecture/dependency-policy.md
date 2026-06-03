@@ -48,6 +48,9 @@ Libraries may implement backend details behind those contracts. They can provide
 - Must sit behind Aurelian rendering/HAL contracts.
 - Must not define world, render snapshot, asset, or material architecture.
 - Windowing should live outside core runtime.
+- A22 introduces `Aurelian.Graphics` with `Silk.NET.Vulkan` and `Silk.NET.Windowing` references only as scaffold/package-smoke dependencies; it does not create a Vulkan instance, window, surface, device, swapchain, command buffers, resources, or renderer.
+- Vortice remains deferred until there is a concrete backend need that Silk.NET does not satisfy.
+- Stride.Graphics remains reference-only and must not be ported into Aurelian-owned graphics code.
 
 ### BEPUphysics
 
@@ -119,6 +122,7 @@ If the compiler cannot see the dependency, Aurelian should distrust it.
 - `Aurelian.World` must not depend on rendering, assets, shaders, Dominatus, physics, navigation, or UI. World-owned renderable data is allowed only as symbolic world refs such as mesh/material strings, not rendering-contract refs or asset/shader handles.
 - `Aurelian.Rendering.Contracts` contains renderer-independent DTOs only: render snapshots, items, cameras, resource refs, command plans, draw items, pass plans, symbolic pipeline/shader/target refs, statuses, reasons, diagnostics, and contract-local snapshot-to-plan assembly. It must not depend on world, assets, shaders, graphics/windowing packages, GPU handles, or backend object models.
 - `Aurelian.Rendering.Null` is the first backend implementation boundary. It may depend on `Aurelian.Rendering.Contracts`, consumes command plans, and returns deterministic headless traces/results, but it must not introduce GPU/windowing packages, world, assets, shaders, backend-native handles, images, or windows.
+- `Aurelian.Graphics` is the first graphics HAL boundary. It may reference `Aurelian.Rendering.Contracts` and tightly scoped graphics/windowing packages, starting with Silk.NET Vulkan/windowing, but it must not reference world, assets, shaders, the null renderer, Dominatus, `CodeReferences`, or vendor source. A22 keeps this project at scaffold/package-smoke only; A23 should add PlantContext + PlantRegistry M0.
 - World-to-render extraction lives in `Aurelian.Runtime.Rendering` because runtime composition may reference both `Aurelian.World` and `Aurelian.Rendering.Contracts`; no separate extraction project is needed until the boundary becomes heavier.
 - `Aurelian.Actuation` may depend on world contracts for world mutation.
 - `Aurelian.Runtime` integrates Dominatus, dispatch, and world-to-render snapshot extraction. It may reference `Aurelian.Rendering.Contracts`, but production runtime must not reference `Aurelian.Rendering.Null`.
@@ -157,8 +161,9 @@ Examples:
 
 - World typed data stores should stay library-free for now.
 - Render snapshot and command-plan contracts are DTO-only in `Aurelian.Rendering.Contracts`.
-- The null renderer is implemented in `Aurelian.Rendering.Null` as a headless backend over command plans. World-to-render extraction now exists in `Aurelian.Runtime.Rendering`, so `WorldDataDocument -> RenderSnapshot -> RenderCommandPlan -> NullRenderer` is testable headlessly; GPU command execution and Silk.NET/Vortice-backed rendering remain future work.
-- Visual render backends can later use Silk.NET/Vortice behind `Aurelian.Rendering.*`.
+- The null renderer is implemented in `Aurelian.Rendering.Null` as a headless backend over command plans. World-to-render extraction now exists in `Aurelian.Runtime.Rendering`, so `WorldDataDocument -> RenderSnapshot -> RenderCommandPlan -> NullRenderer` is testable headlessly.
+- `Aurelian.Graphics` now owns the first graphics HAL scaffold with Silk.NET Vulkan/windowing package visibility only; Vulkan instance/window/device creation remains future work.
+- Visual render backends can later use Silk.NET first behind `Aurelian.Graphics`; Vortice remains deferred.
 - Physics can later use BEPU behind `Aurelian.Physics.*`.
 - Navigation can later use DotRecast behind `Aurelian.Navigation.*`.
 - Assets can keep Tomlyn because TOML syntax is not strategic architecture.
