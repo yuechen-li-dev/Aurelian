@@ -65,4 +65,8 @@ A22 creates `Aurelian.Graphics` as the first graphics HAL project and `tests/Aur
 
 A22 deliberately does not create a Vulkan instance, window, surface, device, swapchain, command buffer, renderer, plant registry, or resources. Vortice and VMA remain deferred, and Stride.Graphics remains a reference-only pitfall corpus.
 
-The next implementation step should be A23 PlantContext + PlantRegistry M0: define `PlantId`, `PlantContext`, `PlantRegistry`, and graphics diagnostics DTOs for one fixed plant descriptor/context while preserving no-global-graphics-singleton design and avoiding native Vulkan device creation unless absolutely required for shape tests.
+A23 adds native-free PlantContext + PlantRegistry M0: `PlantId.Zero`, one fixed Vulkan plant context, deterministic registry diagnostics, explicit presentation ownership, no native handles, and no global graphics singleton.
+
+A24 adds Vulkan instance/device initialization M0 for plant 0. The initializer creates a per-call Vulkan API object, instance, selected physical device, logical device, and selected queue only when the Vulkan loader/runtime and required device capabilities are available. Normal tests remain green on machines without Vulkan by returning unavailable/rejected statuses with diagnostics. Created devices require timeline semaphore support, the queue family must support graphics + compute + transfer and is selected rather than hardcoded, and A24 still creates no window, surface, swapchain, command buffers, resources, or renderer.
+
+The next implementation step should be A25 Timeline fences and resource pool M0: add per-plant timeline semaphore wrappers and native-free pool contracts while still avoiding window/surface/swapchain and rendering resources unless separately scoped.

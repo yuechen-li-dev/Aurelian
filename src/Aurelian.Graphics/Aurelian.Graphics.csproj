@@ -3,6 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Aurelian.Graphics</AssemblyName>
     <RootNamespace>Aurelian.Graphics</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
