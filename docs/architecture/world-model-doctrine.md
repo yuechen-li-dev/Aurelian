@@ -353,3 +353,30 @@ Aurelian world architecture explicitly rejects:
 - no parent inspecting child internals;
 - no renderer dependency in world;
 - no editor-first design.
+
+## Addendum A — Immediate composition rule
+
+```text
+A unit should declare only its immediate composition.
+
+If OldWoman composes Woman and Elder, it does not also manually declare Human and Animal. Those are responsibilities of Woman and Human respectively.
+
+Transitive composition belongs to the resolver, not the authoring file.
+```
+
+## Addendum B — Logic as state machines
+
+```text
+Logic means states and transitions.
+
+If there is no possible transition, the concept is data or invariant, not logic state.
+
+if/else, switch, dispatch tables, utility decisions, HFSMs, and LLM-assisted choices are different representations of state transition logic at different complexity levels.
+```
+
+## Addendum C — Agentic locality
+
+```text
+Aurelian uses agentic in the older/general sense: local units have capacity for autonomous state transition through declared inputs, outputs, and actuators.
+
+LLMs may assist ambiguous decisions, but agentic behavior does not require LLMs.
