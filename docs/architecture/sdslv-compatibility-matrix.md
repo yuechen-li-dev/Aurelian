@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-WyrmCoil SDSL-V remains the reference and semantic inspiration for Aurelian SDSL-V, especially for the Oct-shaped module/declaration/statement/expression direction established during A2 through A5.
+WyrmCoil SDSL-V remains the reference and semantic inspiration for Aurelian SDSL-V, especially for the Oct-shaped module/declaration/statement/expression/validation direction established during A2 through A7.
 
 Aurelian SDSL-V is now its own production C# implementation under `Aurelian.Shaders.Language`. The matrix below tracks where Aurelian currently matches WyrmCoil, where it intentionally differs, where features are deferred, and where WyrmCoil concepts are not applicable to Aurelian.
 
@@ -27,7 +27,7 @@ This document exists to avoid accidental semantic drift while also avoiding blin
 | Arrays | Array type refs and array literals. | Array type refs and M1 array literals. | Compatible | Literal syntax is `[a, b]` and `[]`. |
 | Records | Record field blocks. | Record field blocks. | Compatible | Parsed in M0. |
 | Streams | Stream field blocks. | Stream field blocks. | Compatible | Parsed in M0. |
-| Enums | Enum declarations and variant match arms. | Enum declarations and variant match arms. | Compatible | Validation is deferred. |
+| Enums | Enum declarations and variant match arms. | Enum declarations and variant match arms. | Compatible | A7 validation reports duplicate variants. |
 | Interfaces | Supported in WyrmCoil reference. | AST exists, parser emits unsupported diagnostics for declarations. | Deferred | Parser M2 or validation phase should decide scope. |
 | Shaders | Shader declarations. | Shader declarations. | Compatible | Parsed in M0 shell form. |
 | Material fields | Shader material fields. | `material Name: Type;` and `material { ... }`. | Compatible | Parsed in M0. |
@@ -53,12 +53,12 @@ This document exists to avoid accidental semantic drift while also avoiding blin
 | States | Flow state model in reference. | AST exists only. | Deferred | No parser/validation support yet. |
 | When/goto | Flow control in reference. | AST support exists for flow statements only. | Deferred | No parser support in M1. |
 | Fallibility/try/unwrap | Reference supports postfix `?`/`!` and fallible match arms. | M1 supports prefix `try expr`, prefix `unwrap expr`, and postfix `?`/`!`. | Intentionally different | Prefix forms are Aurelian's documented M1 syntax; postfix forms are retained as compatibility parse shapes. |
-| Diagnostics | Reference parser/validator diagnostics. | C# lex/parse diagnostics returned in result objects. | Compatible | Validation diagnostics are deferred. |
-| Validation | Reference includes validation. | Not implemented over new AST. | Deferred | Recommended next work. |
+| Diagnostics | Reference parser/validator diagnostics. | C# lex/parse/validation diagnostics returned in result objects. | Compatible | A7 adds stable validation codes `SV1001`, `SV1002`, `SV1101`, `SV1201`, `SV1301`, `SV1302`, `SV1401`, `SV1402`, `SV1501`, and `SV1901`. |
+| Validation | Reference includes validation. | A7 structural validation M0 over the new AST is implemented. | Compatible | Covers duplicates, basic type-reference validity, positive array lengths, and same-scope duplicate locals. It intentionally defers full type checking, interface satisfaction, flow checking, and expression typing. |
 | HLSL emission | Reference includes emission path. | Legacy emitter remains unchanged; new AST emission not implemented. | Deferred | No HLSL rewrite in A6. |
 | DXC/SPIR-V runner | Reference has runner/integration concepts. | Not implemented. | Deferred | Out of parser scope. |
 | Artifact manifests | Reference has artifact concepts. | Legacy artifact path remains; new AST artifacts deferred. | Deferred | No artifact rewrite in A6. |
-| Test modules/runner | Reference includes rich tests. | xUnit parser/AST tests in Aurelian. | Intentionally different | C# test framework and production module layout differ. |
+| Test modules/runner | Reference includes rich tests and prototype `.sdslvtest` support. | xUnit parser/AST/validation tests in Aurelian. | Intentionally different | A7 intentionally uses ordinary xUnit tests only; `.sdslvtest` is future work. |
 | mixins | Not a native WyrmCoil SDSL-V production target for Aurelian. | Not native Aurelian SDSL-V. | Not applicable | Old Stride mixins are intentionally excluded. |
 | Old Stride `.sdsl` compatibility | Historical reference only. | Not supported as native Aurelian SDSL-V. | Not applicable | No old Stride effect/base-shader inheritance model. |
 
@@ -69,19 +69,23 @@ This document exists to avoid accidental semantic drift while also avoiding blin
 - **With syntax:** Aurelian prefers assignment-style updates: `base with { Field = value; Other = value; }`. Colon updates are also accepted for WyrmCoil-shaped compatibility.
 - **Utility syntax:** Utility expressions are deferred in parser M1. The existing AST records preserve a future shape for ranked cases, guards, scores, and options.
 - **Fallibility syntax:** Aurelian M1 documents prefix `try expression` and `unwrap expression`; postfix `expression?` and `expression!` are parsed as compatibility shapes.
+- **Validation M0:** Aurelian A7 validates structural AST invariants and type-reference names only. It is not a full shader type checker and does not evaluate expression behavior.
 
 ## 5. Known intentional divergences
 
 - Aurelian does not support old Stride mixins as a native SDSL-V feature.
 - Aurelian does not support old Stride effect/base-shader inheritance as a native SDSL-V model.
 - Aurelian uses C# records/classes and result objects rather than Rust enum and parser result shapes.
-- Aurelian may phase parser, validation, emission, artifact, and fixture work differently from WyrmCoil.
+- Aurelian may phase parser, validation, emission, artifact, and fixture work differently from WyrmCoil. A7 validates through ordinary xUnit tests rather than adding `.sdslvtest`.
 - Aurelian may rename or reshape APIs where C# production needs differ, while preserving compatibility notes here.
 
-## 6. Next compatibility work
+## 6. Future `.sdslvtest` direction
 
-- Parser M2 for flow, utility, and any remaining fallibility details.
-- Validation M0 over the new typed AST.
-- HLSL emission M0 over the new typed AST after validation stabilizes.
+Aurelian may support `.sdslvtest` files analogous to `.octest` by porting the Oct interpreter architecture to C# and using a CPU evaluator for deterministic shader behavior tests. This is intentionally deferred until parser/validation/emission contracts are stable. WyrmCoil remains reference-only for this direction and is not linked into production code.
+
+## 7. Next compatibility work
+
+- HLSL emission M0 over the new typed AST after validation M0.
+- Parser/validation M2 for flow, utility, and any remaining fallibility details.
 - Artifact schema for new AST output.
 - Shader fixtures that exercise accepted Aurelian syntax and documented WyrmCoil compatibility cases.
