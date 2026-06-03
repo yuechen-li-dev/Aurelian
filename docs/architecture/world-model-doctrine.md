@@ -224,7 +224,7 @@ This keeps responsibilities separate:
 
 ## 10. Actuator relationship
 
-Actuators are mutation boundaries. An actuator accepts a typed request and returns a typed result/outcome. It names side effects rather than allowing arbitrary mutation across boundaries. A14 makes the first such boundary concrete under `Aurelian.Actuation.World`: spawn, destroy, attach, detach, and replace-descriptor requests operate over `WorldDocument` values and return `WorldActuationResult` statuses and diagnostics.
+Actuators are mutation boundaries. An actuator accepts a typed request and returns a typed result/outcome. It names side effects rather than allowing arbitrary mutation across boundaries. A14 makes the first such boundary concrete under `Aurelian.Actuation.World`: spawn, destroy, attach, detach, and replace-descriptor requests operate over `WorldDocument` values and return `WorldActuationResult` statuses and diagnostics. A16 extends that boundary to `WorldDataDocument` through typed requests for setting/removing unit names and 2D transforms; data-store mutation still returns structured results rather than mutating original store state in place.
 
 Side effects should be named, including:
 
@@ -347,6 +347,8 @@ A14 — World actuator request/result contracts M0
 ```
 
 A14 lives in `Aurelian.Actuation.World`, not `Aurelian.World`. It adds pure request records for spawning units, destroying leaf units, attaching immediate children, detaching immediate children, and replacing descriptors; it adds status/diagnostic/result contracts; and it applies valid mutations by creating new world documents rather than mutating the input document in place. Applied mutations are resolved through `WorldUnitResolver` before they are returned. Invalid mutations return deterministic diagnostics such as duplicate unit, missing parent/child, duplicate child/slot, root destruction, child-bearing destruction, or resolver-invalid mutation. Dominatus bridges, typed data stores, behavior runtime, blackboards, renderer, assets, shaders, physics, editor workflows, and ECS managers/processors remain outside A14.
+
+A16 adds the first typed world data stores under `Aurelian.World.Stores`. These stores represent data, not logic: `UnitNameStore` maps `UnitId` to a name/label value, and `Transform2Store` maps `UnitId` to a library-free 2D transform value. `WorldDataDocument` groups those stores with the existing `WorldDocument` without replacing the composition model, while `WorldDataSnapshot` resolves a valid document into queryable unit snapshots with optional names, identity-default transforms, and immediate children. These stores are explicit and typed; they are not a generic component framework, do not define `IComponent`, and do not introduce an entity manager, processors, behavior runtime, blackboards, renderer integration, assets, shaders, physics, or Dominatus integration. Mutation is routed through `WorldDataActuator` request/result contracts in `Aurelian.Actuation.World`; invalid names, missing units, and non-finite transforms are rejected with diagnostics, remove-missing operations are no-ops with info diagnostics, and applied changes return new `WorldDataDocument` values. Future stores may include 3D transform, renderable references, camera references, physics state, or navigation state, but they should remain Aurelian-owned contracts and `Aurelian.World` should stay library-free unless a later policy milestone explicitly changes that boundary.
 
 ## 15. Anti-goals
 
