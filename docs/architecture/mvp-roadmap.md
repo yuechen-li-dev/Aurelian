@@ -21,8 +21,9 @@
 - **A18 — Render command plan contracts M0:** add backend-independent command-plan DTO contracts in `Aurelian.Rendering.Contracts.CommandPlans` for symbolic pipeline/shader/target refs, 2D draw items, pass plans, command-plan statuses/reasons/diagnostics, and a tiny snapshot-to-plan builder. No new production project, world extraction, null renderer/backend, asset/shader dependency, graphics/windowing package, GPU handle, or backend-native concept is included. **Completed.**
 - **A19 — Null renderer M0:** add `Aurelian.Rendering.Null` as the first backend-shaped implementation over `RenderCommandPlan`. It consumes ready/empty/rejected plans, validates malformed ready plans, and returns deterministic pass/draw traces and diagnostics without GPU/windowing, assets, shaders, world extraction, or real rendering. The new project is justified by a real backend dependency boundary while `Aurelian.Rendering.Contracts` stays pure DTO/contracts. **Completed.**
 - **A20 — World-to-render snapshot extraction M0:** connect world data stores to renderer-independent snapshots without adding backend dependencies to world. **Completed.**
-- **A21 — First window/backend:** choose and integrate the first visual window/backend path behind the dependency policy.
-- **A22 — First triangle:** render the first triangle through the established snapshot/command-plan/backend path.
+- **A21 — First graphics backend decision audit:** choose the first visual backend direction and document the Vulkan intent-port plan. Silk.NET Vulkan/windowing is the first backend path, Vortice is deferred, Stride.Graphics remains reference-only, and the plant/controller model is preserved. **Completed.**
+- **A22 — Aurelian.Graphics scaffold:** create `Aurelian.Graphics` and `tests/Aurelian.Graphics.Tests`, add Silk.NET Vulkan/windowing package references, and prove package visibility without creating a Vulkan instance, window, surface, device, swapchain, command buffers, renderer, resources, or plant registry. **Completed.**
+- **A23 — PlantContext + PlantRegistry M0:** define `PlantId`, `PlantContext`, `PlantRegistry`, and graphics diagnostics DTOs for one fixed plant descriptor/context without native Vulkan device creation unless absolutely required for shape tests.
 
 ## Shader pipeline status
 
@@ -57,3 +58,11 @@ Deferred beyond A20:
 - asset/material loading;
 - camera stores beyond the default symbolic M0 camera;
 - Dominatus world observation bridge.
+
+## A22 — Aurelian.Graphics scaffold
+
+A22 creates `Aurelian.Graphics` as the first graphics HAL project and `tests/Aurelian.Graphics.Tests` as its package-smoke test boundary. The project references `Aurelian.Rendering.Contracts` plus `Silk.NET.Vulkan` and `Silk.NET.Windowing` only; `Silk.NET.Core` remains transitive and is not centrally pinned.
+
+A22 deliberately does not create a Vulkan instance, window, surface, device, swapchain, command buffer, renderer, plant registry, or resources. Vortice and VMA remain deferred, and Stride.Graphics remains a reference-only pitfall corpus.
+
+The next implementation step should be A23 PlantContext + PlantRegistry M0: define `PlantId`, `PlantContext`, `PlantRegistry`, and graphics diagnostics DTOs for one fixed plant descriptor/context while preserving no-global-graphics-singleton design and avoiding native Vulkan device creation unless absolutely required for shape tests.
