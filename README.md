@@ -6,7 +6,7 @@ Aurelian is a greenfield C# engine/runtime project created after the Stri-V resc
 
 Aurelian is currently in pre-MVP module bring-up. The repository contains a clean solution skeleton, strict build discipline, architecture notes, smoke tests, the first vendored runtime dependency (Dominatus), and the linked `Aurelian.Shaders` module.
 
-A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aurelian.Shaders`. A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`; the legacy carried-over shader parser, AST, lowerer, artifact emitter, mixin/effect, and base-shader behavior remain temporarily in place. A5 will begin parser convergence against the new AST.
+A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aurelian.Shaders`. A4 added the first WyrmCoil-shaped SDSL-V AST contract under `Aurelian.Shaders.Language.Ast`. A5 added the first token-driven SDSL-V parser M0 path under `Aurelian.Shaders.Language`, while the legacy carried-over shader parser, AST, lowerer, artifact emitter, mixin/effect, and base-shader behavior remain temporarily in place.
 
 ## What Aurelian is
 
@@ -15,7 +15,7 @@ A3 converted the carried-over `StriV.ShaderPipeline` project identity into `Aure
 - An explicit data-world engine design.
 - A typed lifecycle, actuator-owned side-effect, render-snapshot, and command-plan oriented architecture.
 - A test-first codebase with nullable reference types and warnings-as-errors for Aurelian-owned projects.
-- The home of `Aurelian.Shaders`, an Aurelian-owned shader module with a new WyrmCoil-shaped SDSL-V AST contract and a temporarily preserved carried-over legacy pipeline.
+- The home of `Aurelian.Shaders`, an Aurelian-owned shader module with a new WyrmCoil-shaped SDSL-V AST contract, a token-driven parser M0 path, and a temporarily preserved carried-over legacy pipeline.
 
 ## What Aurelian is not
 
@@ -40,7 +40,7 @@ vendor/Dominatus/
 
 A3 links `src/Aurelian.Shaders/Aurelian.Shaders.csproj` into `Aurelian.slnx` with smoke tests under `tests/Aurelian.Shaders.Tests/`. The module was renamed from the carried-over `StriV.ShaderPipeline` project, with namespace and project metadata updated to `Aurelian.Shaders`.
 
-A4 converged the first `Aurelian.Shaders` AST contract toward the WyrmCoil SDSL-V module/declaration/type model in `Aurelian.Shaders.Language.Ast`. It did not rewrite the parser, lowerer, or artifact emitter. A5 will start SDSL-V parser convergence while keeping legacy parser/lowerer behavior intact.
+A4 converged the first `Aurelian.Shaders` AST contract toward the WyrmCoil SDSL-V module/declaration/type model in `Aurelian.Shaders.Language.Ast`. A5 added the first token-driven parser M0 path under `Aurelian.Shaders.Language`, including new token, lexer, diagnostic, and parser namespaces. Parser M0 covers namespace/use/type aliases/records/streams/enums/shader shells and a small function/body subset. It does not rewrite the legacy parser, lowerer, artifact emitter, or HLSL output path. A6 should expand parser statement/expression coverage or begin AST-backed validation based on parser stability.
 
 ## Reference folders
 
