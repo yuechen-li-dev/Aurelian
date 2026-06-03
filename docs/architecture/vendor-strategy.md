@@ -23,18 +23,27 @@ Dominatus is the first buildable vendored runtime dependency for Aurelian. A1 ve
 vendor/Dominatus/
 ```
 
-The A1 vendor subset contains:
+The Dominatus vendor subset contains:
 
 ```text
 vendor/Dominatus/README.md
 vendor/Dominatus/LICENSE.txt
 vendor/Dominatus/src/Dominatus.Core/
 vendor/Dominatus/src/Dominatus.OptFlow/
+vendor/Dominatus/src/Ariadne.OptFlow/
+vendor/Dominatus/src/Dominatus.UtilityLite/
+vendor/Dominatus/samples/Ariadne.Console/
+vendor/Dominatus/samples/Dominatus.Fishtank/
+vendor/Dominatus/samples/Dominatus.TinyTown/
+vendor/Dominatus/samples/Dominatus.RTSBenchmark/
+vendor/Dominatus/docs/
 ```
 
-Only `Dominatus.Core` and `Dominatus.OptFlow` are linked in `Aurelian.slnx`. `Aurelian.Runtime` references `Dominatus.Core` for the runtime smoke harness. `Aurelian.Core` remains Dominatus-free.
+A1 linked `Dominatus.Core` and `Dominatus.OptFlow` in `Aurelian.slnx`. A24b links two additional build modules: `Ariadne.OptFlow` and `Dominatus.UtilityLite`. `Aurelian.Runtime` references `Dominatus.Core` for the runtime smoke harness; the A24b modules are solution-linked only and no Aurelian production project references them yet. `Aurelian.Core` remains Dominatus-free.
 
-Dominatus was copied from `https://github.com/yuechen-li-dev/Dominatus/` at commit `220df609fc5c4aebca63ed07b953aa13be969ac2`.
+The A24b samples are reference-only material for Codex authors. `Ariadne.Console`, `Dominatus.Fishtank`, `Dominatus.TinyTown`, and `Dominatus.RTSBenchmark` must not be added to `Aurelian.slnx`, must not be referenced by Aurelian production projects, and must remain under `vendor/Dominatus/samples/` unless a later vendor-maintenance task explicitly moves reference material.
+
+Dominatus was initially copied from `https://github.com/yuechen-li-dev/Dominatus/` at commit `220df609fc5c4aebca63ed07b953aa13be969ac2`. A24b copied the additional modules, samples, and selected upstream authoring/sample docs from commit `a21d5ab646632f29d3399d79852bdb22e68a001c`.
 
 ## Aurelian.Shaders module boundary
 
