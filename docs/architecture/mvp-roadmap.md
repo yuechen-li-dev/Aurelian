@@ -203,3 +203,18 @@ Status: implemented.
 A43 bridges A42 shader artifacts to A39 graphics pipeline descriptors without creating a direct shader/graphics dependency. `Aurelian.Rendering.Contracts.Shaders` defines neutral compiled shader DTOs for programs, stages, status, diagnostics, and format versioning. `Aurelian.Shaders.Language.Artifacts.Compiled` exports `SpirvShaderArtifact` and `SdslvSpirvShaderArtifact` into those DTOs after validating artifact success, non-empty stages, duplicate stages, entry points, SPIR-V bytes, and SHA-256 metadata. `Aurelian.Graphics.Vulkan.Pipelines.Graphics.VulkanCompiledShaderStageMapper` consumes only the neutral DTOs and maps vertex/fragment stages to `VulkanShaderStageDescriptor` values after rejecting compute stages for graphics M0 and validating SPIR-V byte shape/magic before little-endian word conversion.
 
 A43 deliberately does not make `Aurelian.Graphics` reference `Aurelian.Shaders`, does not make `Aurelian.Shaders` reference `Aurelian.Graphics`, and does not add DXC/runtime compilation to graphics. Asset/TOML shader integration, descriptor sets, draw commands, swapchains/windows/surfaces, and direct SDSL-V-to-pipeline creation remain deferred. Recommended next milestone: `A44 — Pipeline consumes compiled shader program M0`.
+
+## A44 — Pipeline consumes compiled shader program M0
+
+A44 adds `VulkanCompiledGraphicsPipelineDescriptorFactory` in `Aurelian.Graphics` so graphics code can consume a neutral `CompiledShaderProgram` and produce a `VulkanGraphicsPipelineDescriptor` without requiring a Vulkan runtime. The factory validates the graphics M0 requirements (vertex + fragment stages, no compute stage, no duplicate stage, SPIR-V byte shape through the existing mapper, and valid vertex input descriptors), then forwards the mapped shader stage descriptors plus fixed graphics options into the A39 pipeline descriptor.
+
+A44 also adds an optional helper that accepts an `AurelianVulkanPlant` and `AurelianVulkanRenderPass`, builds the descriptor, and delegates native creation to `VulkanGraphicsPipelineFactory.Create`. Native failures are returned as diagnostics, so Vulkan/runtime availability remains optional for normal tests.
+
+Dependency intent:
+
+- `Aurelian.Graphics` consumes neutral `Aurelian.Rendering.Contracts.Shaders` contracts only.
+- `Aurelian.Graphics` does not reference `Aurelian.Shaders` and does not load or invoke DXC/SDSL-V tooling.
+- `Aurelian.Shaders` remains the compiler/artifact producer and does not reference `Aurelian.Graphics`.
+- Draw commands, pipeline bind commands, descriptor sets, uniforms/push constants, assets/TOML, and swapchain/window/surface remain deferred.
+
+Recommended next milestone: **A45 — Pipeline bind + draw command M0**, because pipelines can now be built from neutral compiled shader programs, but command recording still cannot bind a graphics pipeline or issue a draw.
