@@ -280,3 +280,12 @@ A49 intentionally does not render to swapchain images, does not submit rendering
 A50 is a docs/design milestone that defines the compositor boundary before passthrough. The accepted split is: neutral compositor DTOs in `Aurelian.Rendering.Contracts/Compositor`, runtime Dominatus policy in `Aurelian.Runtime/Compositor`, and Vulkan mechanism in `Aurelian.Graphics/Vulkan/Compositor`. Policy observes frame/output readiness facts, confidence, agreement, and cadence; mechanism maps typed plant-output and presentation-target refs to Vulkan images, barriers, commands, submit, and presentation synchronization.
 
 A50 does not implement compositor contracts, swapchain image wrappers, image copy/blit, Dominatus runtime policy, Vulkan commands, packages, project changes, vendor changes, or CodeReferences changes. The recommended next milestone is **A51 — Compositor contracts M0**, because the neutral request/result/fact seam should exist before backend wrappers or passthrough mechanism code.
+
+
+## A51 — Compositor contracts M0
+
+Status: implemented.
+
+A51 adds the neutral compositor DTO layer under `Aurelian.Rendering.Contracts.Compositor`. The contracts model compositor policy kinds, symbolic plant output refs, symbolic presentation target refs, plant output readiness statuses/facts, required output sets with pure readiness satisfaction, compositor diagnostics, frame facts, dispatch requests, dispatch statuses, dispatch diagnostics, and dispatch results.
+
+A51 remains contracts-only: no Vulkan or Silk types, no Dominatus/runtime policy implementation, no graphics compositor mechanism, no world dependency, no new packages, and no new project references. The recommended next milestone is **A52 — Swapchain image wrappers M0**, because the backend mechanism next needs acquired presentation images to be addressable without making neutral contracts own graphics handles.

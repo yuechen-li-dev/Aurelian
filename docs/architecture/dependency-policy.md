@@ -314,3 +314,10 @@ The milestone does not add any dependency from `Aurelian.Graphics` to shader com
 A50 keeps compositor design split across existing dependency seams. Neutral compositor facts, requests, results, diagnostics, plant-output refs, and presentation-target refs should be plain DTOs in `Aurelian.Rendering.Contracts/Compositor`; they must not contain Vulkan handles, Silk.NET structs, Dominatus types, graphics resource owners, or world objects.
 
 Runtime compositor policy belongs in `Aurelian.Runtime/Compositor` because runtime already composes rendering contracts and Dominatus. Graphics compositor mechanism belongs in `Aurelian.Graphics/Vulkan/Compositor` because it will own Vulkan image wrappers, barriers, copy/blit/compute command recording, submit, and semaphore handoff. The forbidden edges remain forbidden: `Aurelian.Graphics` must not reference Dominatus or runtime policy, and runtime policy contracts must not depend on `Aurelian.Graphics`. A51 should implement neutral contracts first, with no Vulkan, no Dominatus, and no graphics implementation.
+
+
+## A51 compositor contracts dependency note
+
+A51 places compositor M0 DTOs in `Aurelian.Rendering.Contracts.Compositor`, preserving `Aurelian.Rendering.Contracts` as the neutral rendering contract assembly. The contracts may be consumed by future runtime policy and graphics mechanism code, but they do not reference `Aurelian.Graphics`, `Aurelian.Runtime`, `Aurelian.World`, Dominatus, Silk.NET, Vulkan handles, shader projects, or backend resource owners.
+
+The intended next step, **A52 — Swapchain image wrappers M0**, belongs in `Aurelian.Graphics`: it should wrap acquired swapchain images as backend mechanism targets, initialize presentation-image layout tracking, and keep ownership/handle details out of neutral contracts.
