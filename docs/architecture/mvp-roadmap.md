@@ -178,3 +178,12 @@ A40 adds a tooling-only DXC subprocess path under `Aurelian.Shaders.Language.Ext
 The subprocess compiler writes HLSL to a temporary file, invokes DXC with `-spirv`, `-fspv-target-env=vulkan1.3`, `-HV 2021`, `-E`, `-T`, and `-Fo`, captures stdout/stderr/exit code, reads SPIR-V bytes from the output file, and deletes temporary files. Tests cover resolver availability/unavailability, invalid requests, invalid HLSL when a tool is available, and tiny checked-in HLSL vertex/pixel fixtures when DXC is available.
 
 A40 deliberately does not integrate DXC into `Aurelian.Graphics`, does not add `Vortice.Dxc`, does not connect SDSL-V artifact emission to SPIR-V, and does not feed DXC-produced bytes into Vulkan pipeline creation. The intended path remains `SDSL-V -> HLSL/Slang -> DXC subprocess -> SPIR-V artifact -> Vulkan pipeline creation`; direct SDSL-V -> SPIR-V is not planned. Recommended next step: `A41 — HLSL -> SPIR-V shader artifact M0`.
+
+
+## A41 — HLSL -> SPIR-V shader artifact M0
+
+Status: implemented.
+
+A41 turns the A40 DXC subprocess spike into a shader artifact layer for HLSL stage sources. `Aurelian.Shaders` now accepts typed HLSL vertex, fragment, and compute stage inputs with entry point, profile, and source name metadata; validates stage/profile alignment; invokes DXC only through the existing subprocess wrapper; captures SPIR-V bytes; computes lowercase SHA-256 hashes for UTF-8 HLSL source text and raw SPIR-V bytes; and writes deterministic JSON manifests with ordered fields, diagnostics, DXC arguments, hashes, and base64 SPIR-V payloads.
+
+A41 deliberately remains a tooling/artifact milestone. It does not integrate SDSL-V emission, `Aurelian.Graphics`, `Aurelian.Assets`, Vulkan pipeline creation, Vortice.Dxc, Vortice.Vulkan, runtime DXC invocation, or direct SDSL-V -> SPIR-V generation. If DXC is unavailable, artifact tests assert unavailable diagnostics instead of failing normal test runs. The recommended next milestone is A42 — SDSL-V -> HLSL -> SPIR-V artifact M0.

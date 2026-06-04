@@ -243,3 +243,12 @@ A38 keeps the Vulkan command path on the existing `Silk.NET.Vulkan` dependency. 
 A39 keeps graphics pipeline creation inside the existing `Aurelian.Graphics` Vulkan backend boundary. Public pipeline inputs are Aurelian-owned records: raw SPIR-V word arrays per shader stage, stage kind and entry point metadata, vertex buffer layouts, vertex attributes, and narrow fixed-state toggles. Silk.NET Vulkan is used only at the native edge to create/destroy `VkShaderModule`, `VkPipelineLayout`, and `VkPipeline`; raw handles remain internal owner details.
 
 The shader boundary is intentionally explicit and temporary: A39 consumes SPIR-V artifacts but does not produce them. SDSL-V remains Aurelian's source language, while the planned compiler-facing path is `SDSL-V -> HLSL or Slang -> DXC -> SPIR-V artifact -> Vulkan pipeline creation`. A39 adds no direct SDSL-V-to-SPIR-V path and no DXC, Vortice.Dxc, Vortice.Vulkan, assets/shaders project dependency, descriptor sets, push constants, uniform buffers, draw commands, pipeline bind commands, swapchain/window/surface, VMA/VMASharp, service locator, reflection, vendor/reference-code dependency, or global singleton.
+
+
+## A41 — HLSL -> SPIR-V shader artifact M0
+
+Status: implemented.
+
+A41 turns the A40 DXC subprocess spike into a shader artifact layer for HLSL stage sources. `Aurelian.Shaders` now accepts typed HLSL vertex, fragment, and compute stage inputs with entry point, profile, and source name metadata; validates stage/profile alignment; invokes DXC only through the existing subprocess wrapper; captures SPIR-V bytes; computes lowercase SHA-256 hashes for UTF-8 HLSL source text and raw SPIR-V bytes; and writes deterministic JSON manifests with ordered fields, diagnostics, DXC arguments, hashes, and base64 SPIR-V payloads.
+
+A41 deliberately remains a tooling/artifact milestone. It does not integrate SDSL-V emission, `Aurelian.Graphics`, `Aurelian.Assets`, Vulkan pipeline creation, Vortice.Dxc, Vortice.Vulkan, runtime DXC invocation, or direct SDSL-V -> SPIR-V generation. If DXC is unavailable, artifact tests assert unavailable diagnostics instead of failing normal test runs. The recommended next milestone is A42 — SDSL-V -> HLSL -> SPIR-V artifact M0.
