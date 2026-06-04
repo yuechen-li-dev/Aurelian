@@ -182,3 +182,18 @@ A28 implements the first version of the allocator boundary described above. `Aur
 The raw backend is intentionally M0 fallback plumbing. It allocates one `VkDeviceMemory` object per successful request only so the next resource milestone can prove buffer ownership against a real allocator contract. Future buffer and texture code must depend on `IVulkanMemoryAllocator`; it must not call `vkAllocateMemory`/`vkFreeMemory` directly and must not expose backend-specific VMA or raw Vulkan allocation details.
 
 VMA/VMASharp remains deferred. A future VMA backend may replace or supplement the raw backend behind the same contracts after package/API and NativeAOT behavior are verified.
+
+
+## 11. A29 buffer resource note
+
+A29 implements the first resource that consumes the A28 allocation boundary: `Aurelian.Graphics.Vulkan.Resources.Buffers`. Buffer creation owns Aurelian usage flags and create plans, creates `VkBuffer`, queries `VkMemoryRequirements`, requests allocation through `IVulkanMemoryAllocator`, binds the returned allocation with `vkBindBufferMemory`, and exposes `GpuResourceState` tagged with `PlantId` and allocation backend.
+
+The allocator boundary is preserved deliberately:
+
+- buffer code does not call `vkAllocateMemory` or `vkFreeMemory`;
+- raw allocation/free remains isolated to `RawVulkanMemoryAllocator`;
+- allocation request size uses Vulkan memory requirements size, while buffer resource state records the logical plan size;
+- allocation handles own backend size/offset/memory facts and are disposed by the resource;
+- future VMA/arena allocators can satisfy the same request/result contract without changing buffer creation contracts.
+
+A29 intentionally defers mapped memory, upload rings, staging/copy commands, descriptor binding, textures, render passes, pipelines, and draw paths. The recommended A30 step is Buffer mapped memory / upload M0 so data movement is explicit before higher-level rendering milestones require populated buffers.
