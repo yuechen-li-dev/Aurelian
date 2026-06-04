@@ -254,3 +254,13 @@ record offscreen draw
 ```
 
 No swapchain/window/surface, present/acquire path, render backend abstraction, render graph, descriptor sets, uniforms, index buffers, runtime shader compilation, VMA/VMASharp, or Vortice are introduced. The recommended next milestone is `A48 — Surface/swapchain M0` because offscreen commands can now be recorded and submitted, leaving presentation as the next missing visual path.
+
+## A48 — Surface/swapchain M0
+
+Status: implemented.
+
+A48 introduces the first presentation resources in `Aurelian.Graphics.Vulkan.Presentation`: a Silk.NET.Windowing hidden-window path, `VkSurfaceKHR` ownership, surface support/capability/format/present-mode queries, deterministic format/present-mode selection, `VkSwapchainKHR` creation, swapchain image retrieval, per-image color image views, and idempotent disposal for surface and swapchain owners.
+
+Presentation is explicit at plant creation. `VulkanPlantOptions.EnablePresentation` enables the Silk.NET-required surface instance extensions and requires `VK_KHR_swapchain`; normal offscreen plant creation continues without swapchain requirements. The tests are unavailable/headless-safe and return cleanly when CI cannot create a window, surface, or swapchain.
+
+A48 does not render to swapchain images, does not add a present loop, does not add descriptor/uniform/index-buffer work, does not add shader compiler dependencies to graphics, and does not add VMA/VMASharp or Vortice. Acquire/present methods return deferred diagnostics. Recommended next milestone: **A49 — Swapchain acquire/present M0**.

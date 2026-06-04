@@ -12,4 +12,5 @@ public static class VulkanInitDiagnosticCodes
     public const string DeviceCreationFailed = "AGV1008";
     public const string DebugUtilsUnavailable = "AGV1009";
     public const string DeviceSelected = "AGV1010";
+    public const string PresentationSurfaceExtensionsUnavailable = "AGV1011";
 }

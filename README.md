@@ -152,3 +152,9 @@ The fixtures are checked-in byte arrays generated once from tiny vertex/fragment
 A47 adds a narrow Vulkan command submit helper in `Aurelian.Graphics`: one executable `VulkanCommandBufferLease` can be submitted to the plant graphics queue, signal `VulkanFenceBundle.CommandListFence`, optionally wait for that timeline value, and retire through the existing `VulkanCommandBufferPool`. The A46 offscreen triangle proof now records, ends, submits, waits, and verifies the command-list fence completion when Vulkan is available.
 
 A47 remains backend plumbing only. It adds no swapchain/window/surface, no present/acquire path, no render backend facade, no descriptors/uniforms/index buffers, no shader compiler dependency in graphics, no VMA/VMASharp, and no Vortice.
+
+## A48 Surface/swapchain M0
+
+A48 adds the first presentation-resource seam in `Aurelian.Graphics`. Presentation-enabled Vulkan plants now request the Silk.NET.Windowing surface instance extensions and the `VK_KHR_swapchain` device extension, while ordinary offscreen plants remain free of swapchain requirements. `Aurelian.Graphics.Vulkan.Presentation` owns the M0 window/surface/swapchain boundary: it creates a hidden Silk.NET window when available, creates `VkSurfaceKHR`, checks queue-family surface support, queries capabilities/formats/present modes, deterministically selects format and present mode, creates `VkSwapchainKHR`, retrieves images, and creates per-image color views.
+
+The A48 tests are headless-safe. If windowing, surface support, presentation extensions, or swapchain creation is unavailable, typed diagnostics are returned and tests exit cleanly. A48 intentionally does not render to swapchain images and does not implement a present loop; acquire/present methods exist only as deferred skeleton diagnostics for the next presentation milestone.
