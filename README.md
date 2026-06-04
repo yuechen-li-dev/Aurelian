@@ -86,3 +86,9 @@ dotnet test Aurelian.slnx -c Debug
 ```
 
 A28 implements Vulkan allocator contracts + raw allocator M0 before buffer resource implementation: allocation requests/results, handles, telemetry, diagnostics, `IVulkanMemoryAllocator`, cached memory-type selection, and an isolated raw Vulkan backend. The raw backend is an M0 fallback only; VMA remains deferred behind the same Aurelian-owned contracts, and future buffers/textures must use `IVulkanMemoryAllocator`. The next implementation step should be A29 Buffer resource M0.
+
+## A31 graphics upload note
+
+A31 adds the first one-shot staging-buffer to device-local buffer upload path in `Aurelian.Graphics`: CPU bytes are written into a mapped `CpuToGpu` staging buffer, copied with `vkCmdCopyBuffer`, submitted to the plant queue, and synchronized through the command-list timeline fence. The M0 path waits synchronously for completion before disposing staging resources, preserving lifetime safety without adding an upload ring or persistent staging pool.
+
+Upload rings, batching, async staging retirement, texture uploads, barriers/layout tracking, descriptors, swapchains/windows/surfaces, render passes, pipelines, and draw paths remain deferred. The recommended next graphics milestone is `A32 — Barrier/layout tracker M0`.
