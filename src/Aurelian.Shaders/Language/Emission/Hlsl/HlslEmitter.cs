@@ -85,7 +85,10 @@ public static class HlslEmitter
             Indent();
             foreach (var field in fields)
             {
-                WriteLine($"{MapType(field.TypeName)} {field.Name};");
+                var semantic = GetM0Semantic(name, field.Name);
+                WriteLine(semantic is null
+                    ? $"{MapType(field.TypeName)} {field.Name};"
+                    : $"{MapType(field.TypeName)} {field.Name} : {semantic};");
             }
 
             Outdent();
@@ -135,7 +138,10 @@ public static class HlslEmitter
             }
 
             var parameters = string.Join(", ", function.Parameters.Select(parameter => $"{MapType(parameter.TypeName)} {parameter.Name}"));
-            WriteLine($"{MapType(function.ReturnType)} {function.Name}({parameters})");
+            var returnSemantic = GetM0ReturnSemantic(function);
+            WriteLine(returnSemantic is null
+                ? $"{MapType(function.ReturnType)} {function.Name}({parameters})"
+                : $"{MapType(function.ReturnType)} {function.Name}({parameters}) : {returnSemantic}");
             WriteLine("{");
             Indent();
             if (function.Body is not null)
@@ -247,6 +253,45 @@ public static class HlslEmitter
                 HlslEmissionDiagnosticCodes.UnsupportedExpressionForHlslM0,
                 $"HLSL M0 does not support expression shape '{expression.GetType().Name}'.");
             return "/* unsupported */";
+        }
+
+        private static string? GetM0Semantic(string aggregateName, string fieldName)
+        {
+            if (aggregateName.Equals("VertexInput", StringComparison.Ordinal) &&
+                fieldName.Equals("Position", StringComparison.Ordinal))
+            {
+                return "POSITION";
+            }
+
+            if (aggregateName.Equals("VertexOutput", StringComparison.Ordinal) &&
+                fieldName.Equals("Position", StringComparison.Ordinal))
+            {
+                return "SV_Position";
+            }
+
+            if (fieldName.Equals("Color", StringComparison.Ordinal))
+            {
+                return "COLOR0";
+            }
+
+            return null;
+        }
+
+        private static string? GetM0ReturnSemantic(SdslvFunctionDecl function)
+        {
+            if (!function.Name.Equals("PSMain", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            if (function.ReturnType is SdslvNamedTypeRef named &&
+                named.Path.Segments.Count > 0 &&
+                named.Path.Segments[^1].Equals("float4", StringComparison.Ordinal))
+            {
+                return "SV_Target0";
+            }
+
+            return null;
         }
 
         private string MapType(SdslvTypeRef typeRef)

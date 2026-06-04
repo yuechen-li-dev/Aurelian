@@ -33,8 +33,8 @@ public sealed class HlslEmissionM0Tests
         var emission = ParseValidateEmitSmokeTriangle();
 
         Assert.Contains("struct VertexInput", emission.Hlsl);
-        Assert.Contains("float3 Position;", emission.Hlsl);
-        Assert.Contains("float4 Color;", emission.Hlsl);
+        Assert.Contains("float3 Position : POSITION;", emission.Hlsl);
+        Assert.Contains("float4 Color : COLOR0;", emission.Hlsl);
         Assert.Contains("struct VertexOutput", emission.Hlsl);
     }
 
