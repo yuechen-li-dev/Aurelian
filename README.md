@@ -166,3 +166,7 @@ A49 replaces the A48 deferred acquire/present skeleton with a minimal typed pres
 Acquire/present outcomes are explicit result records: acquired/presented, out-of-date, suboptimal, unavailable/surface-lost, rejected/disposed/invalid-index, and failed outcomes return diagnostics without automatic swapchain recreation. Tests remain headless-safe and skip cleanly when Vulkan presentation is unavailable.
 
 A49 still does not render into swapchain images, does not add a compositor, does not add a present loop, and does not connect offscreen drawing to presentation. Present M0 does not wait on the render-finished semaphore because render-to-swapchain/compositor submission is deferred to a later milestone.
+
+## A50 Compositor policy/mechanism split audit
+
+A50 documents the compositor as a policy/mechanism split before passthrough implementation. Neutral compositor contracts should live in `Aurelian.Rendering.Contracts/Compositor`; runtime compositor policy should live in `Aurelian.Runtime/Compositor` and use Dominatus/HFSM/utility logic; Vulkan compositor mechanism should live in `Aurelian.Graphics/Vulkan/Compositor` and execute typed dispatch requests without depending on Dominatus. A50 is docs-only: no compositor, swapchain image wrapping, copy/blit commands, runtime policy code, source projects, packages, vendor, or CodeReferences were changed. The recommended next milestone is `A51 — Compositor contracts M0`.
