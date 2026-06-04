@@ -219,3 +219,7 @@ The M0 render pass path does not add VMA/VMASharp, Vortice, global service locat
 A37 keeps framebuffer creation behind Aurelian-owned descriptor/result/owner contracts in `Aurelian.Graphics.Vulkan.Pipelines.Framebuffers`. Silk.NET Vulkan remains plumbing at the native edge for `VkFramebuffer` creation/destruction only; raw Vulkan handles are not public API, and compatibility is expressed in Aurelian terms (`PlantId`, texture usage/format/size, render pass descriptor data).
 
 The M0 path supports one color attachment and no framebuffer cache. It does not add VMA/VMASharp, Vortice, global services, reflection, descriptor sets, render pass begin/end command recording, pipeline creation, draw calls, swapchain/window/surface dependencies, or cross-module references to world/assets/shaders/null rendering/vendor/reference code.
+
+## A38 render pass command dependency note
+
+A38 keeps the Vulkan command path on the existing `Silk.NET.Vulkan` dependency. Render pass begin/end emission is implemented behind Aurelian-owned request/result/diagnostic types under `Aurelian.Graphics.Vulkan.Commanding.RenderPasses`; it does not introduce VMA/VMASharp, Vortice, service locators, reflection-based construction, swapchain/window/surface dependencies, or vendor code changes.
