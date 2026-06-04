@@ -193,3 +193,9 @@ The mapper is intentionally deterministic and test-covered, while command emissi
 A33 keeps Vulkan texture memory behind the same Aurelian-owned allocator boundary as buffers. Texture code may create and destroy images and image views, query image memory requirements, and bind returned allocations, but it must not call raw memory allocation/free APIs. `vkAllocateMemory`, `vkFreeMemory`, `vkMapMemory`, and `vkUnmapMemory` remain allocator-backend details only.
 
 Texture creation continues the reference-only policy for Stride and other engines: their image/view/lifetime intent may inform audits, but production code owns its create plans, diagnostics, layout tracker integration, and allocator calls directly. No VMA/VMASharp, Vortice, swapchain/window, render-pass, descriptor, sampler, or upload dependency is introduced by this milestone.
+
+## A34 barrier emission dependency note
+
+A34 keeps synchronization emission inside the existing `Aurelian.Graphics` Vulkan backend boundary. The new barrier emitter uses Silk.NET Vulkan to record `vkCmdPipelineBarrier` against a per-plant `VulkanCommandBufferLease`, but the public planning model remains Aurelian-owned and handle-free. Native images and buffers are paired with plans only by small emission request records at the backend edge.
+
+This milestone does not introduce VMA/VMASharp, Vortice, global services, reflection, texture upload, render passes, pipelines, descriptor systems, swapchains/windows/surfaces, or cross-module dependencies on world/assets/shaders/null rendering/vendor/reference code. Raw memory allocation and mapping APIs remain allocator-backend details only.
