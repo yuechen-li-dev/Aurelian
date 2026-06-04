@@ -216,14 +216,14 @@ A53 — Vulkan compositor passthrough copy M0
   Implemented mechanism-only passthrough copy in Aurelian.Graphics: resolve one plant output, resolve one acquired presentation target, emit explicit barriers, record vkCmdCopyImage, submit/wait, and return neutral dispatch results plus Vulkan diagnostics.
   Present semaphore handoff remains deferred.
 
-A54 — Runtime Dominatus compositor policy M0
-  Add the first runtime policy session using Dominatus blackboard/HFSM/acts to decide dispatch-or-wait for passthrough/full-quality M0 facts.
+A54 — First visible triangle through compositor path
+  Implemented as an unavailable/headless-safe graphics integration test: acquire a swapchain image, draw a checked-in-SPIR-V triangle offscreen, copy through compositor passthrough into the acquired presentation target, and present. No direct render-to-swapchain bypass and no frame loop.
 
-A55 — First visible triangle through compositor path
-  Connect offscreen draw output through compositor passthrough to presentation in a minimal frame loop proof.
+A55 — Runtime Dominatus compositor policy M0
+  Add the first runtime policy session using Dominatus blackboard/HFSM/acts to decide dispatch-or-wait for passthrough/full-quality M0 facts.
 ```
 
-A51 implemented neutral contracts first. A52 then added graphics-side swapchain image wrappers after the policy/mechanism seam was explicit. A53 then added the first graphics-side passthrough copy mechanism without adding runtime/Dominatus policy.
+A51 implemented neutral contracts first. A52 then added graphics-side swapchain image wrappers after the policy/mechanism seam was explicit. A53 then added the first graphics-side passthrough copy mechanism without adding runtime/Dominatus policy. A54 then proved the first visible triangle path through the compositor seam rather than bypassing it; runtime/Dominatus policy, differential composition, and frame-loop ownership remain future work.
 
 ## 10. Anti-goals
 

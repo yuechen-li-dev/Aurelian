@@ -1,11 +1,15 @@
 using Aurelian.Graphics.Plants;
 using Aurelian.Graphics.Vulkan.Device;
+using Aurelian.Graphics.Vulkan.Pipelines.Framebuffers;
+using Aurelian.Graphics.Vulkan.Pipelines.RenderPasses;
 using Silk.NET.Vulkan;
 
 namespace Aurelian.Graphics.Vulkan.Commanding.RenderPasses;
 
 public sealed unsafe class VulkanRenderPassCommandEncoder
 {
+    private readonly Dictionary<VulkanRenderPassScope, ActiveRenderPassAttachments> activeRenderPasses = [];
+
     public VulkanRenderPassBeginResult Begin(
         AurelianVulkanPlant plant,
         VulkanCommandBufferLease commandBuffer,
@@ -39,6 +43,7 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
 
             plant.Vk.CmdBeginRenderPass(commandBuffer.CommandBuffer, &beginInfo, SubpassContents.Inline);
             VulkanRenderPassScope scope = commandBuffer.MarkRenderPassActive(plant.Context.Id);
+            activeRenderPasses[scope] = new ActiveRenderPassAttachments(request.RenderPass, request.Framebuffer);
             return VulkanRenderPassBeginResult.Recorded(scope, diagnostics);
         }
         catch (Exception exception)
@@ -69,6 +74,7 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
         try
         {
             plant.Vk.CmdEndRenderPass(commandBuffer.CommandBuffer);
+            MarkFinalAttachmentLayouts(scope);
             _ = commandBuffer.TryClearRenderPass(scope);
             return VulkanRenderPassCommandResult.Recorded(diagnostics);
         }
@@ -79,6 +85,23 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
                 $"vkCmdEndRenderPass failed: {exception.Message}",
                 plant.Context.Id));
             return new VulkanRenderPassCommandResult(VulkanRenderPassCommandStatus.Failed, diagnostics);
+        }
+    }
+
+    private void MarkFinalAttachmentLayouts(VulkanRenderPassScope scope)
+    {
+        if (!activeRenderPasses.Remove(scope, out ActiveRenderPassAttachments? active))
+        {
+            return;
+        }
+
+        int attachmentCount = Math.Min(
+            active.RenderPass.Descriptor.ColorAttachments.Count,
+            active.Framebuffer.Descriptor.ColorAttachments.Count);
+        for (int i = 0; i < attachmentCount; i++)
+        {
+            VulkanRenderPassAttachmentDescriptor attachment = active.RenderPass.Descriptor.ColorAttachments[i];
+            active.Framebuffer.Descriptor.ColorAttachments[i].LayoutTracker.TryMarkCurrentLayout(0, 0, attachment.FinalLayout);
         }
     }
 
@@ -225,4 +248,8 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
 
     private static VulkanRenderPassCommandDiagnostic Diagnostic(string code, string message, PlantId plantId)
         => new(code, VulkanRenderPassCommandDiagnosticSeverity.Error, message, plantId);
+
+    private sealed record ActiveRenderPassAttachments(
+        AurelianVulkanRenderPass RenderPass,
+        AurelianVulkanFramebuffer Framebuffer);
 }

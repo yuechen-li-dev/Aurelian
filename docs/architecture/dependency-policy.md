@@ -334,3 +334,9 @@ The wrappers are explicitly not ordinary allocated textures: they do not own ima
 A53 keeps the compositor copy mechanism inside `Aurelian.Graphics.Vulkan.Compositor` and continues to consume only neutral contracts from `Aurelian.Rendering.Contracts.Compositor`. `Aurelian.Graphics` still does not reference `Aurelian.Runtime`, Dominatus, `Aurelian.World`, shader compiler projects, Vortice, VMA/VMASharp, CodeReferences, or service-locator/reflection paths.
 
 The new plant-output wrappers are non-owning views over existing `AurelianVulkanTexture` resources, and presentation targets remain non-owning swapchain image wrappers. Barrier emission is extended only enough to handle presentation target images without pretending that swapchain images are allocated textures. Policy selection, differential/reduced-frequency behavior, multi-GPU transfers, compute compositor pipelines, and present semaphore handoff remain deferred.
+
+## A54 visible triangle dependency note
+
+A54 keeps the first visible triangle proof inside `Aurelian.Graphics` tests and existing Vulkan mechanism seams. The integration path uses checked-in SPIR-V fixture bytes from graphics tests, existing offscreen draw helpers, the A53 passthrough compositor, and the A49 swapchain acquire/present wrapper; it does not add a graphics reference to `Aurelian.Shaders`, DXC, `Aurelian.Runtime`, Dominatus, `Aurelian.World`, Vortice, VMA/VMASharp, CodeReferences, vendor changes, service locators, singletons, or reflection.
+
+The proof is intentionally not a renderer facade and not a frame loop. Runtime/Dominatus policy, differential composition, present-loop/frame-pump ownership, descriptor/uniform/index-buffer work, multi-GPU transfer, asset/TOML integration, and shader compiler integration remain deferred behind the existing contracts and graphics mechanism boundaries.
