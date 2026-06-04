@@ -197,3 +197,20 @@ The allocator boundary is preserved deliberately:
 - future VMA/arena allocators can satisfy the same request/result contract without changing buffer creation contracts.
 
 A29 intentionally defers mapped memory, upload rings, staging/copy commands, descriptor binding, textures, render passes, pipelines, and draw paths. The recommended A30 step is Buffer mapped memory / upload M0 so data movement is explicit before higher-level rendering milestones require populated buffers.
+
+## 12. A30 mapped memory / CPU upload M0 note
+
+A30 extends the A28/A29 allocation boundary with a narrow mapped-memory contract. `VulkanAllocationRequest.MapOnCreate` allows allocator backends to persistently map allocations when the requested usage is host-visible (`CpuToGpu` or `GpuToCpu`). `GpuOnly + MapOnCreate` is rejected at the allocator boundary with an explicit diagnostic, and raw `vkMapMemory`/`vkUnmapMemory` calls remain isolated to `RawVulkanMemoryAllocator`.
+
+`VulkanMemoryAllocation` records whether an allocation is mapped and writable without exposing the mapped pointer publicly. `AurelianVulkanBuffer.Write(ReadOnlySpan<byte>, ulong)` is the public CPU upload M0 path for buffers: it rejects disposed buffers, unmapped/non-writable allocations, and out-of-bounds writes, while empty writes are successful no-ops. The M0 allocator selects `HOST_VISIBLE | HOST_COHERENT` memory for `CpuToGpu`/`GpuToCpu`, so no flush/invalidate path is implemented yet.
+
+Still deferred:
+
+- staging-to-device-local buffer copies;
+- command buffer recording/submission for uploads;
+- upload ring and Dominatus upload-budget policy;
+- non-coherent memory flush/invalidate support;
+- textures/images and image layout transitions;
+- descriptor binding, render passes, pipelines, and draw paths.
+
+The recommended next step is `A31 — Staging buffer / device-local upload copy M0` so device-local buffers can be populated without weakening the mapped-allocation boundary.

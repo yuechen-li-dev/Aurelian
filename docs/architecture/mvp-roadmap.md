@@ -85,3 +85,9 @@ A28 adds Vulkan allocator contracts + raw allocator M0: Aurelian-owned allocatio
 A29 adds Vulkan Buffer resource M0: Aurelian-owned usage flags and create plans, `VkBuffer` creation, memory requirement queries, `IVulkanMemoryAllocator` allocation requests, `vkBindBufferMemory`, plant-owned `GpuResourceState`, safe idempotent disposal, and unavailable-safe tests. Buffer code does not call `vkAllocateMemory`/`vkFreeMemory`; those remain isolated to allocator backends. A29 still adds no textures, upload rings, mapped memory API, staging/copy commands, descriptors, swapchains, windows, surfaces, render passes, pipelines, or draw work.
 
 The next implementation step should be A30 Buffer mapped memory / upload M0 so CPU-visible and staging upload paths are explicit before vertex-buffer or texture milestones consume real data.
+
+## A30 — Buffer mapped memory / CPU upload M0
+
+A30 adds safe host-visible buffer writes to `Aurelian.Graphics`. Allocation requests can opt into persistent mapping with `MapOnCreate` for `CpuToGpu`/`GpuToCpu` memory, `GpuOnly` mapping is rejected with diagnostics, and raw Vulkan map/unmap calls remain isolated to `RawVulkanMemoryAllocator`. `AurelianVulkanBuffer.Write(ReadOnlySpan<byte>, ulong)` is the M0 CPU upload API for mapped buffers and performs disposed, mapped/writable, and bounds checks before copying bytes.
+
+A30 deliberately does not add staging-to-device-local copies, command buffer upload submission, an upload ring, non-coherent flush/invalidate support, textures, descriptor binding, render passes, pipelines, drawing, swapchains/windows/surfaces, VMA/VMASharp, or Vortice. The recommended next milestone is `A31 — Staging buffer / device-local upload copy M0`.

@@ -3,7 +3,7 @@ using Silk.NET.Vulkan;
 
 namespace Aurelian.Graphics.Vulkan.Resources.Allocation;
 
-public sealed class VulkanMemoryAllocation : IDisposable
+public sealed unsafe class VulkanMemoryAllocation : IDisposable
 {
     private readonly Action<VulkanMemoryAllocation> free;
     private bool disposed;
@@ -15,6 +15,7 @@ public sealed class VulkanMemoryAllocation : IDisposable
         ulong offset,
         ulong sizeBytes,
         VulkanMemoryUsage usage,
+        void* mappedPointer,
         Action<VulkanMemoryAllocation> free)
     {
         PlantId = plantId;
@@ -23,6 +24,7 @@ public sealed class VulkanMemoryAllocation : IDisposable
         Offset = offset;
         SizeBytes = sizeBytes;
         Usage = usage;
+        MappedPointer = mappedPointer;
         this.free = free;
     }
 
@@ -37,6 +39,14 @@ public sealed class VulkanMemoryAllocation : IDisposable
     public ulong SizeBytes { get; }
 
     public VulkanMemoryUsage Usage { get; }
+
+    public bool IsMapped => MappedPointer is not null;
+
+    public bool CanWrite => IsMapped && (Usage == VulkanMemoryUsage.CpuToGpu || Usage == VulkanMemoryUsage.GpuToCpu);
+
+    internal void* MappedPointer { get; private set; }
+
+    internal void MarkUnmapped() => MappedPointer = null;
 
     public void Dispose()
     {

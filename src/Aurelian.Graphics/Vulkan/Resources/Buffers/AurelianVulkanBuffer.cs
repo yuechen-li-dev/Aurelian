@@ -45,7 +45,49 @@ public sealed unsafe class AurelianVulkanBuffer : IDisposable
 
     public bool IsDisposed => disposed;
 
+    public bool IsMapped => allocation?.IsMapped == true;
+
+    public bool CanWrite => allocation?.CanWrite == true;
+
     internal NativeBuffer NativeBuffer { get; private set; }
+
+    public VulkanBufferWriteResult Write(ReadOnlySpan<byte> data, ulong destinationOffset = 0)
+    {
+        if (disposed || allocation is null)
+        {
+            return Rejected(
+                VulkanBufferWriteDiagnosticCodes.BufferDisposed,
+                "Cannot write to a disposed Vulkan buffer.");
+        }
+
+        if (data.IsEmpty)
+        {
+            return VulkanBufferWriteResult.Written;
+        }
+
+        if (!allocation.CanWrite)
+        {
+            return Rejected(
+                VulkanBufferWriteDiagnosticCodes.BufferNotMapped,
+                "Cannot write to a Vulkan buffer whose allocation is not mapped for host writes.");
+        }
+
+        ulong byteCount = (ulong)data.Length;
+        if (destinationOffset > SizeBytes || byteCount > SizeBytes - destinationOffset)
+        {
+            return Rejected(
+                VulkanBufferWriteDiagnosticCodes.WriteOutOfBounds,
+                "Buffer write range exceeds the logical buffer size.");
+        }
+
+        fixed (byte* source = data)
+        {
+            byte* destination = (byte*)allocation.MappedPointer + destinationOffset;
+            System.Buffer.MemoryCopy(source, destination, SizeBytes - destinationOffset, byteCount);
+        }
+
+        return VulkanBufferWriteResult.Written;
+    }
 
     public void Dispose()
     {
@@ -66,4 +108,13 @@ public sealed unsafe class AurelianVulkanBuffer : IDisposable
         allocation = null;
         device = default;
     }
+
+    private VulkanBufferWriteResult Rejected(string code, string message)
+        => new(
+            VulkanBufferWriteStatus.Rejected,
+            [new VulkanBufferWriteDiagnostic(
+                code,
+                VulkanBufferDiagnosticSeverity.Error,
+                message,
+                PlantId)]);
 }
