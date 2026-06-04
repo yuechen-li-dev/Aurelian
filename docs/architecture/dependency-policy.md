@@ -302,3 +302,9 @@ This does not relax the graphics dependency boundary. `Aurelian.Graphics` must n
 A47 keeps queue submission inside the existing `Aurelian.Graphics` Vulkan backend boundary. The new submitter exposes Aurelian-owned request/result/status/diagnostic types and uses Silk.NET Vulkan only at the native queue-submit edge for one executable command buffer and one timeline semaphore signal.
 
 Command submission remains per plant and uses the existing `VulkanFenceBundle.CommandListFence` and `VulkanCommandBufferPool` rather than a global scheduler, service locator, renderer facade, or resource cleanup system. A47 does not add swapchains/windows/surfaces, present/acquire, descriptor systems, uniforms, index buffers, shader compiler references, VMA/VMASharp, Vortice, or vendor/reference-code dependencies.
+
+## A49 swapchain acquire/present dependency note
+
+A49 keeps swapchain acquire/present work inside the existing `Aurelian.Graphics.Vulkan.Presentation` boundary. It uses the existing Silk.NET Vulkan KHR surface/swapchain extension plumbing to create binary semaphores, acquire swapchain images, and present image indices while returning Aurelian-owned typed results and diagnostics.
+
+The milestone does not add any dependency from `Aurelian.Graphics` to shader compiler projects, runtime DXC, assets, world, null rendering, Dominatus, Stride/reference code, VMA/VMASharp, Vortice, service locators, reflection, or global graphics singletons. Present M0 deliberately does not wait on the render-finished semaphore yet because no render-to-swapchain or compositor submission exists in A49.

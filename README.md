@@ -158,3 +158,11 @@ A47 remains backend plumbing only. It adds no swapchain/window/surface, no prese
 A48 adds the first presentation-resource seam in `Aurelian.Graphics`. Presentation-enabled Vulkan plants now request the Silk.NET.Windowing surface instance extensions and the `VK_KHR_swapchain` device extension, while ordinary offscreen plants remain free of swapchain requirements. `Aurelian.Graphics.Vulkan.Presentation` owns the M0 window/surface/swapchain boundary: it creates a hidden Silk.NET window when available, creates `VkSurfaceKHR`, checks queue-family surface support, queries capabilities/formats/present modes, deterministically selects format and present mode, creates `VkSwapchainKHR`, retrieves images, and creates per-image color views.
 
 The A48 tests are headless-safe. If windowing, surface support, presentation extensions, or swapchain creation is unavailable, typed diagnostics are returned and tests exit cleanly. A48 intentionally does not render to swapchain images and does not implement a present loop; acquire/present methods exist only as deferred skeleton diagnostics for the next presentation milestone.
+
+## A49 Swapchain acquire/present M0
+
+A49 replaces the A48 deferred acquire/present skeleton with a minimal typed presentation conveyor belt. Swapchains now own a tiny binary semaphore set for presentation synchronization, `AcquireNextImage(...)` calls `vkAcquireNextImageKHR`, and `Present(...)` validates the image index before calling `vkQueuePresentKHR`.
+
+Acquire/present outcomes are explicit result records: acquired/presented, out-of-date, suboptimal, unavailable/surface-lost, rejected/disposed/invalid-index, and failed outcomes return diagnostics without automatic swapchain recreation. Tests remain headless-safe and skip cleanly when Vulkan presentation is unavailable.
+
+A49 still does not render into swapchain images, does not add a compositor, does not add a present loop, and does not connect offscreen drawing to presentation. Present M0 does not wait on the render-finished semaphore because render-to-swapchain/compositor submission is deferred to a later milestone.
