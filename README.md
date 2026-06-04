@@ -84,3 +84,5 @@ Current reference folders include:
 dotnet build Aurelian.slnx -c Debug
 dotnet test Aurelian.slnx -c Debug
 ```
+
+A28 implements Vulkan allocator contracts + raw allocator M0 before buffer resource implementation: allocation requests/results, handles, telemetry, diagnostics, `IVulkanMemoryAllocator`, cached memory-type selection, and an isolated raw Vulkan backend. The raw backend is an M0 fallback only; VMA remains deferred behind the same Aurelian-owned contracts, and future buffers/textures must use `IVulkanMemoryAllocator`. The next implementation step should be A29 Buffer resource M0.
