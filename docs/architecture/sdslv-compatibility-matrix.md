@@ -107,3 +107,10 @@ A40 does not change SDSL-V syntax or semantic compatibility. It records the comp
 A41 does not change SDSL-V syntax, parsing, validation, or HLSL emission compatibility. It adds an HLSL-facing SPIR-V artifact layer under `Aurelian.Shaders.Language.Artifacts.Spirv`: checked-in HLSL stage fixtures can compile through the A40 DXC subprocess wrapper into typed stage artifacts, raw SPIR-V bytes, lowercase SHA-256 source/SPIR-V hashes, and deterministic JSON manifests that include `spirvBase64`.
 
 This is intentionally not SDSL-V integration yet. The SDSL-V path remains `SDSL-V -> HLSL -> SPIR-V artifact` for future work; direct SDSL-V -> SPIR-V remains out of scope, and graphics pipeline consumption remains deferred.
+
+
+## A42 SDSL-V -> HLSL -> SPIR-V artifact note
+
+A42 connects the existing SDSL-V parser, validator, and HLSL emitter to the A41 SPIR-V shader artifact layer under `Aurelian.Shaders.Language.Artifacts.SdslvSpirv`. The artifact path records source name, lowercase UTF-8 SHA-256 source hash, generated HLSL, optional nested HLSL/SPIR-V artifact data, and diagnostics. JSON output is deterministic and retains HLSL inline for M0 traceability.
+
+The M0 stage extractor is deliberately simple: it requires generated HLSL entry points named `VSMain` and `PSMain`, emits `vs_6_0` and `ps_6_0` stage sources, and then delegates to DXC through the A41 artifact layer. The smoke path uses temporary HLSL semantic conventions (`VertexInput.Position -> POSITION`, `VertexOutput.Position -> SV_Position`, `Color -> COLOR0`, and `PSMain` `float4` returns -> `SV_Target0`) until SDSL-V has explicit semantic metadata. Direct SDSL-V -> SPIR-V and graphics/runtime integration remain out of scope.

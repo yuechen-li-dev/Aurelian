@@ -187,3 +187,11 @@ Status: implemented.
 A41 turns the A40 DXC subprocess spike into a shader artifact layer for HLSL stage sources. `Aurelian.Shaders` now accepts typed HLSL vertex, fragment, and compute stage inputs with entry point, profile, and source name metadata; validates stage/profile alignment; invokes DXC only through the existing subprocess wrapper; captures SPIR-V bytes; computes lowercase SHA-256 hashes for UTF-8 HLSL source text and raw SPIR-V bytes; and writes deterministic JSON manifests with ordered fields, diagnostics, DXC arguments, hashes, and base64 SPIR-V payloads.
 
 A41 deliberately remains a tooling/artifact milestone. It does not integrate SDSL-V emission, `Aurelian.Graphics`, `Aurelian.Assets`, Vulkan pipeline creation, Vortice.Dxc, Vortice.Vulkan, runtime DXC invocation, or direct SDSL-V -> SPIR-V generation. If DXC is unavailable, artifact tests assert unavailable diagnostics instead of failing normal test runs. The recommended next milestone is A42 — SDSL-V -> HLSL -> SPIR-V artifact M0.
+
+## A42 — SDSL-V -> HLSL -> SPIR-V shader artifact M0
+
+Status: implemented.
+
+A42 implements the shader/compiler-side SDSL-V to SPIR-V artifact bridge in `Aurelian.Shaders`. The M0 path parses and validates `.sdslv` source, emits traceable HLSL, extracts conventional `VSMain`/`PSMain` stage sources, and reuses the A41 HLSL-to-SPIR-V artifact layer to produce typed stage bytes, hashes, diagnostics, and deterministic JSON when DXC is available. Missing DXC remains an availability diagnostic rather than a normal test failure.
+
+A42 deliberately does not integrate with assets/TOML, Vulkan pipeline creation, swapchains, windows, or runtime graphics. Direct SDSL-V to SPIR-V remains out of scope; A43 should make the graphics pipeline consume existing SPIR-V artifact bytes rather than importing compiler dependencies.

@@ -252,3 +252,9 @@ Status: implemented.
 A41 turns the A40 DXC subprocess spike into a shader artifact layer for HLSL stage sources. `Aurelian.Shaders` now accepts typed HLSL vertex, fragment, and compute stage inputs with entry point, profile, and source name metadata; validates stage/profile alignment; invokes DXC only through the existing subprocess wrapper; captures SPIR-V bytes; computes lowercase SHA-256 hashes for UTF-8 HLSL source text and raw SPIR-V bytes; and writes deterministic JSON manifests with ordered fields, diagnostics, DXC arguments, hashes, and base64 SPIR-V payloads.
 
 A41 deliberately remains a tooling/artifact milestone. It does not integrate SDSL-V emission, `Aurelian.Graphics`, `Aurelian.Assets`, Vulkan pipeline creation, Vortice.Dxc, Vortice.Vulkan, runtime DXC invocation, or direct SDSL-V -> SPIR-V generation. If DXC is unavailable, artifact tests assert unavailable diagnostics instead of failing normal test runs. The recommended next milestone is A42 — SDSL-V -> HLSL -> SPIR-V artifact M0.
+
+## A42 shader compiler boundary
+
+A42 keeps the SDSL-V -> HLSL -> SPIR-V artifact path entirely inside `Aurelian.Shaders`. DXC remains a tool/subprocess dependency used by shader artifact emission and tests, not a runtime graphics dependency. `Aurelian.Graphics` must continue to consume only SPIR-V bytes and metadata in later work; it must not reference SDSL-V parsers, HLSL emitters, `Microsoft.Direct3D.DXC`, or any `Vortice.Dxc` wrapper.
+
+The A42 stage extraction is intentionally convention-based M0 metadata: generated HLSL must contain `VSMain` and `PSMain`, and the smoke fixture uses emitter conventions for `POSITION`, `SV_Position`, `COLOR0`, and `SV_Target0`. Real semantic annotations/reflection are deferred.
