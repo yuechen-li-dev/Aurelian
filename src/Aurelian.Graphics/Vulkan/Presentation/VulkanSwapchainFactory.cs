@@ -37,6 +37,7 @@ public static unsafe class VulkanSwapchainFactory
         KhrSwapchain? swapchainApi = null;
         AurelianVulkanSurface? surfaceOwner = null;
         AurelianVulkanSwapchain? swapchainOwner = null;
+        VulkanPresentationSemaphoreSet? semaphoreSet = null;
 
         try
         {
@@ -190,6 +191,28 @@ public static unsafe class VulkanSwapchainFactory
                 return imageViewFailure!;
             }
 
+            if (!VulkanPresentationSemaphoreSet.TryCreate(plant, out semaphoreSet, out Result semaphoreResult))
+            {
+                foreach (ImageView imageView in imageViews)
+                {
+                    if (imageView.Handle != 0)
+                    {
+                        plant.Vk.DestroyImageView(plant.Device, imageView, (AllocationCallbacks*)null);
+                    }
+                }
+
+                swapchainCommands.DestroySwapchain(plant.Device, swapchain, (AllocationCallbacks*)null);
+                swapchainCommands.Dispose();
+                surfaceOwner.Dispose();
+                return ResultWith(
+                    VulkanPresentationStatus.Unavailable,
+                    diagnostics,
+                    VulkanPresentationDiagnosticCodes.SemaphoreCreationFailed,
+                    VulkanPresentationDiagnosticSeverity.Error,
+                    $"vkCreateSemaphore failed for swapchain presentation synchronization with result {semaphoreResult}.",
+                    plant.Context.Id);
+            }
+
             VulkanSwapchainFacts facts = new(
                 plant.Context.Id,
                 extent.Width,
@@ -200,7 +223,8 @@ public static unsafe class VulkanSwapchainFactory
                 (uint)images.Length,
                 (uint)imageViews.Length,
                 (uint)capabilities.CurrentTransform);
-            swapchainOwner = new AurelianVulkanSwapchain(plant, swapchainCommands, swapchain, images, imageViews, facts);
+            swapchainOwner = new AurelianVulkanSwapchain(plant, swapchainCommands, swapchain, images, imageViews, semaphoreSet, facts);
+            semaphoreSet = null;
             swapchainApi = null;
 
             return new VulkanSwapchainCreateResult(VulkanPresentationStatus.Created, surfaceOwner, swapchainOwner, diagnostics);
@@ -208,6 +232,7 @@ public static unsafe class VulkanSwapchainFactory
         catch (Exception ex) when (IsWindowingUnavailableException(ex))
         {
             swapchainOwner?.Dispose();
+            semaphoreSet?.Dispose();
             surfaceOwner?.Dispose();
             swapchainApi?.Dispose();
             surfaceApi?.Dispose();
@@ -223,6 +248,7 @@ public static unsafe class VulkanSwapchainFactory
         catch (Exception ex)
         {
             swapchainOwner?.Dispose();
+            semaphoreSet?.Dispose();
             surfaceOwner?.Dispose();
             swapchainApi?.Dispose();
             surfaceApi?.Dispose();

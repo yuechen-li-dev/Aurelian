@@ -146,18 +146,6 @@ public sealed class VulkanSwapchainM0Tests
         Assert.Equal(PresentModeKHR.FifoKhr, selected);
     }
 
-    [Fact]
-    public void VulkanSwapchain_AcquirePresentSkeleton_ReturnsDeferredDiagnostic()
-        => WithOptionalSwapchain((_, swapchain) =>
-        {
-            VulkanSwapchainAcquireResult acquire = swapchain.AcquireNextImage();
-            VulkanPresentationResult present = swapchain.Present(0);
-
-            Assert.False(acquire.Success);
-            Assert.False(present.Success);
-            Assert.Contains(acquire.Diagnostics, diagnostic => diagnostic.Code == VulkanPresentationDiagnosticCodes.AcquirePresentDeferred);
-            Assert.Contains(present.Diagnostics, diagnostic => diagnostic.Code == VulkanPresentationDiagnosticCodes.AcquirePresentDeferred);
-        });
 
     private static void WithOptionalSwapchain(Action<AurelianVulkanSurface, AurelianVulkanSwapchain> action)
     {

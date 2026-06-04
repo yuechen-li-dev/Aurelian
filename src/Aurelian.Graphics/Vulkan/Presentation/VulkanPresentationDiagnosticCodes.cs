@@ -16,4 +16,10 @@ public static class VulkanPresentationDiagnosticCodes
     public const string PresentationDisposed = "AGPR1012";
     public const string HeadlessEnvironment = "AGPR1013";
     public const string AcquirePresentDeferred = "AGPR1014";
+    public const string SemaphoreCreationFailed = "AGPR1015";
+    public const string InvalidImageIndex = "AGPR1016";
+    public const string SwapchainOutOfDate = "AGPR1017";
+    public const string SwapchainSuboptimal = "AGPR1018";
+    public const string SurfaceLost = "AGPR1019";
+    public const string PresentDeferredRemoved = "AGPR1020";
 }

@@ -264,3 +264,13 @@ A48 introduces the first presentation resources in `Aurelian.Graphics.Vulkan.Pre
 Presentation is explicit at plant creation. `VulkanPlantOptions.EnablePresentation` enables the Silk.NET-required surface instance extensions and requires `VK_KHR_swapchain`; normal offscreen plant creation continues without swapchain requirements. The tests are unavailable/headless-safe and return cleanly when CI cannot create a window, surface, or swapchain.
 
 A48 does not render to swapchain images, does not add a present loop, does not add descriptor/uniform/index-buffer work, does not add shader compiler dependencies to graphics, and does not add VMA/VMASharp or Vortice. Acquire/present methods return deferred diagnostics. Recommended next milestone: **A49 — Swapchain acquire/present M0**.
+
+## A49 — Swapchain acquire/present M0
+
+Status: implemented.
+
+A49 turns the A48 swapchain skeleton into a minimal presentation conveyor belt. `AurelianVulkanSwapchain` now owns one binary image-available semaphore and one binary render-finished semaphore through a tiny `VulkanPresentationSemaphoreSet`, exposes typed acquire and present result models, calls `vkAcquireNextImageKHR`, and calls `vkQueuePresentKHR` for a caller-supplied image index.
+
+Out-of-date, suboptimal, surface-lost, unavailable, disposed, and invalid-index cases are returned as typed results with presentation diagnostics rather than being treated as ordinary exceptions. Tests remain headless-safe: unavailable Vulkan/window/surface/swapchain environments return diagnostics and exit cleanly.
+
+A49 intentionally does not render to swapchain images, does not submit rendering work, does not introduce a compositor, and does not add a present loop. Present M0 uses no wait semaphores because the render-to-swapchain/compositor milestone that will signal the render-finished semaphore is deferred. Recommended next milestone: **A50 — Compositor passthrough M0**.
