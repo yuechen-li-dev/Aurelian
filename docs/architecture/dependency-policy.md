@@ -308,3 +308,9 @@ Command submission remains per plant and uses the existing `VulkanFenceBundle.Co
 A49 keeps swapchain acquire/present work inside the existing `Aurelian.Graphics.Vulkan.Presentation` boundary. It uses the existing Silk.NET Vulkan KHR surface/swapchain extension plumbing to create binary semaphores, acquire swapchain images, and present image indices while returning Aurelian-owned typed results and diagnostics.
 
 The milestone does not add any dependency from `Aurelian.Graphics` to shader compiler projects, runtime DXC, assets, world, null rendering, Dominatus, Stride/reference code, VMA/VMASharp, Vortice, service locators, reflection, or global graphics singletons. Present M0 deliberately does not wait on the render-finished semaphore yet because no render-to-swapchain or compositor submission exists in A49.
+
+## A50 compositor policy/mechanism split dependency note
+
+A50 keeps compositor design split across existing dependency seams. Neutral compositor facts, requests, results, diagnostics, plant-output refs, and presentation-target refs should be plain DTOs in `Aurelian.Rendering.Contracts/Compositor`; they must not contain Vulkan handles, Silk.NET structs, Dominatus types, graphics resource owners, or world objects.
+
+Runtime compositor policy belongs in `Aurelian.Runtime/Compositor` because runtime already composes rendering contracts and Dominatus. Graphics compositor mechanism belongs in `Aurelian.Graphics/Vulkan/Compositor` because it will own Vulkan image wrappers, barriers, copy/blit/compute command recording, submit, and semaphore handoff. The forbidden edges remain forbidden: `Aurelian.Graphics` must not reference Dominatus or runtime policy, and runtime policy contracts must not depend on `Aurelian.Graphics`. A51 should implement neutral contracts first, with no Vulkan, no Dominatus, and no graphics implementation.

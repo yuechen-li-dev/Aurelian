@@ -273,4 +273,10 @@ A49 turns the A48 swapchain skeleton into a minimal presentation conveyor belt. 
 
 Out-of-date, suboptimal, surface-lost, unavailable, disposed, and invalid-index cases are returned as typed results with presentation diagnostics rather than being treated as ordinary exceptions. Tests remain headless-safe: unavailable Vulkan/window/surface/swapchain environments return diagnostics and exit cleanly.
 
-A49 intentionally does not render to swapchain images, does not submit rendering work, does not introduce a compositor, and does not add a present loop. Present M0 uses no wait semaphores because the render-to-swapchain/compositor milestone that will signal the render-finished semaphore is deferred. Recommended next milestone: **A50 — Compositor passthrough M0**.
+A49 intentionally does not render to swapchain images, does not submit rendering work, does not introduce a compositor, and does not add a present loop. Present M0 uses no wait semaphores because the render-to-swapchain/compositor milestone that will signal the render-finished semaphore is deferred. Recommended next milestone: **A50 — Compositor policy/mechanism split audit**.
+
+## A50 — Compositor policy/mechanism split audit
+
+A50 is a docs/design milestone that defines the compositor boundary before passthrough. The accepted split is: neutral compositor DTOs in `Aurelian.Rendering.Contracts/Compositor`, runtime Dominatus policy in `Aurelian.Runtime/Compositor`, and Vulkan mechanism in `Aurelian.Graphics/Vulkan/Compositor`. Policy observes frame/output readiness facts, confidence, agreement, and cadence; mechanism maps typed plant-output and presentation-target refs to Vulkan images, barriers, commands, submit, and presentation synchronization.
+
+A50 does not implement compositor contracts, swapchain image wrappers, image copy/blit, Dominatus runtime policy, Vulkan commands, packages, project changes, vendor changes, or CodeReferences changes. The recommended next milestone is **A51 — Compositor contracts M0**, because the neutral request/result/fact seam should exist before backend wrappers or passthrough mechanism code.
