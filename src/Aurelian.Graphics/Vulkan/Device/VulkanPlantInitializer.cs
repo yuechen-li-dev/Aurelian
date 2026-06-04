@@ -2,8 +2,12 @@ using System.Runtime.InteropServices;
 using Aurelian.Graphics.Plants;
 using Aurelian.Graphics.Vulkan.Diagnostics;
 using Silk.NET.Core;
+using Silk.NET.Core.Contexts;
 using Silk.NET.Core.Native;
+using Silk.NET.Maths;
 using Silk.NET.Vulkan;
+using Silk.NET.Vulkan.Extensions.KHR;
+using Silk.NET.Windowing;
 
 namespace Aurelian.Graphics.Vulkan.Device;
 
@@ -30,6 +34,39 @@ public static unsafe class VulkanPlantInitializer
             IReadOnlyList<string> availableInstanceExtensions = EnumerateInstanceExtensions(vk);
             List<string> enabledLayers = [];
             List<string> enabledInstanceExtensions = [];
+
+            if (options.EnablePresentation)
+            {
+                IReadOnlyList<string>? requiredSurfaceExtensions = TryGetRequiredPresentationInstanceExtensions(out string? presentationExtensionError);
+                if (requiredSurfaceExtensions is null)
+                {
+                    vk.Dispose();
+                    return ResultWith(
+                        VulkanInitStatus.Unavailable,
+                        diagnostics,
+                        VulkanInitDiagnosticCodes.PresentationSurfaceExtensionsUnavailable,
+                        VulkanInitDiagnosticSeverity.Error,
+                        $"Vulkan presentation was requested, but Silk.NET.Windowing could not report required surface extensions: {presentationExtensionError}",
+                        plantId);
+                }
+
+                foreach (string requiredExtension in requiredSurfaceExtensions)
+                {
+                    if (!availableInstanceExtensions.Contains(requiredExtension, StringComparer.Ordinal))
+                    {
+                        vk.Dispose();
+                        return ResultWith(
+                            VulkanInitStatus.Rejected,
+                            diagnostics,
+                            VulkanInitDiagnosticCodes.RequiredExtensionMissing,
+                            VulkanInitDiagnosticSeverity.Error,
+                            $"Vulkan presentation requires instance extension '{requiredExtension}', but it is not available.",
+                            plantId);
+                    }
+
+                    enabledInstanceExtensions.Add(requiredExtension);
+                }
+            }
 
             if (options.EnableValidation)
             {
@@ -115,6 +152,24 @@ public static unsafe class VulkanPlantInitializer
             }
 
             List<string> enabledDeviceExtensions = [];
+            if (options.EnablePresentation)
+            {
+                if (!IsDeviceExtensionAvailable(vk, selected.PhysicalDevice, KhrSwapchain.ExtensionName))
+                {
+                    vk.DestroyInstance(instance, (AllocationCallbacks*)null);
+                    vk.Dispose();
+                    return ResultWith(
+                        VulkanInitStatus.Rejected,
+                        diagnostics,
+                        VulkanInitDiagnosticCodes.RequiredExtensionMissing,
+                        VulkanInitDiagnosticSeverity.Error,
+                        $"Vulkan presentation requires device extension '{KhrSwapchain.ExtensionName}', but it is not available on the selected physical device.",
+                        plantId);
+                }
+
+                enabledDeviceExtensions.Add(KhrSwapchain.ExtensionName);
+            }
+
             Result deviceResult = CreateLogicalDevice(vk, selected, options, enabledDeviceExtensions, out device);
             if (deviceResult != Result.Success)
             {
@@ -135,7 +190,7 @@ public static unsafe class VulkanPlantInitializer
                 PlantKind.Vulkan,
                 GpuCapabilityTier.VulkanM0,
                 selected.DeviceName,
-                IsPresentationPlant: true);
+                IsPresentationPlant: options.EnablePresentation);
             VulkanPlantFacts facts = new(
                 plantId,
                 selected.DeviceName,
@@ -259,6 +314,7 @@ public static unsafe class VulkanPlantInitializer
             TimelineSemaphore = options.RequireTimelineSemaphores && selected.TimelineSemaphores,
         };
 
+        using var extensionNames = SilkMarshal.StringArrayToMemory(enabledDeviceExtensions, NativeStringEncoding.UTF8);
         DeviceCreateInfo createInfo = new()
         {
             SType = StructureType.DeviceCreateInfo,
@@ -266,11 +322,76 @@ public static unsafe class VulkanPlantInitializer
             QueueCreateInfoCount = 1,
             PQueueCreateInfos = &queueCreateInfo,
             EnabledExtensionCount = (uint)enabledDeviceExtensions.Count,
-            PpEnabledExtensionNames = null,
+            PpEnabledExtensionNames = enabledDeviceExtensions.Count == 0 ? null : (byte**)extensionNames.Handle,
         };
 
         return vk.CreateDevice(selected.PhysicalDevice, &createInfo, null, out device);
     }
+
+
+    private static IReadOnlyList<string>? TryGetRequiredPresentationInstanceExtensions(out string? error)
+    {
+        error = null;
+
+        try
+        {
+            WindowOptions windowOptions = WindowOptions.DefaultVulkan;
+            windowOptions.IsVisible = false;
+            windowOptions.Size = new Vector2D<int>(64, 64);
+            using IWindow window = Window.Create(windowOptions);
+            IVkSurface? surface = window.VkSurface;
+            if (surface is null)
+            {
+                error = "Silk.NET window did not expose a Vulkan surface source.";
+                return null;
+            }
+
+            uint count = 0;
+            byte** extensions = surface.GetRequiredExtensions(out count);
+            List<string> names = [];
+            for (int i = 0; i < count; i++)
+            {
+                string? name = SilkMarshal.PtrToString((nint)extensions[i], NativeStringEncoding.UTF8);
+                if (!string.IsNullOrWhiteSpace(name) && !names.Contains(name, StringComparer.Ordinal))
+                {
+                    names.Add(name);
+                }
+            }
+
+            return names;
+        }
+        catch (Exception ex) when (IsWindowingUnavailableException(ex))
+        {
+            error = $"{ex.GetType().Name}: {ex.Message}";
+            return null;
+        }
+    }
+
+    private static bool IsDeviceExtensionAvailable(Vk vk, PhysicalDevice physicalDevice, string extensionName)
+    {
+        uint count = 0;
+        Result result = vk.EnumerateDeviceExtensionProperties(physicalDevice, (byte*)null, ref count, (ExtensionProperties*)null);
+        if (result != Result.Success || count == 0)
+        {
+            return false;
+        }
+
+        ExtensionProperties[] properties = new ExtensionProperties[count];
+        fixed (ExtensionProperties* propertiesPointer = properties)
+        {
+            result = vk.EnumerateDeviceExtensionProperties(physicalDevice, (byte*)null, ref count, propertiesPointer);
+        }
+
+        return result == Result.Success && properties.Any(property => string.Equals(FixedString(property.ExtensionName), extensionName, StringComparison.Ordinal));
+    }
+
+    private static bool IsWindowingUnavailableException(Exception ex)
+        => ex is PlatformNotSupportedException
+            or DllNotFoundException
+            or FileNotFoundException
+            or EntryPointNotFoundException
+            or BadImageFormatException
+            or InvalidOperationException;
 
     private static IReadOnlyList<string> EnumerateInstanceLayers(Vk vk)
     {

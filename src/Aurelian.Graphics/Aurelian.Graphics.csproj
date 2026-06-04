@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Silk.NET.Vulkan" />
+    <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" />
     <PackageReference Include="Silk.NET.Windowing" />
   </ItemGroup>
 </Project>
