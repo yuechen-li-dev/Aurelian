@@ -57,14 +57,60 @@ public sealed class AurelianVulkanSwapchain : IDisposable
                 [DisposedDiagnostic("Cannot acquire a swapchain image because the swapchain has been disposed.")]);
         }
 
+        Fence acquireFence = default;
+        FenceCreateInfo fenceCreateInfo = new()
+        {
+            SType = StructureType.FenceCreateInfo,
+        };
+
+        Result fenceCreateResult = plant.Vk.CreateFence(plant.Device, in fenceCreateInfo, (AllocationCallbacks*)null, out acquireFence);
+        if (fenceCreateResult != Result.Success)
+        {
+            return new VulkanSwapchainAcquireResult(
+                VulkanSwapchainAcquireStatus.Failed,
+                null,
+                [new VulkanPresentationDiagnostic(
+                    VulkanPresentationDiagnosticCodes.AcquireFailed,
+                    VulkanPresentationDiagnosticSeverity.Error,
+                    $"vkCreateFence failed for swapchain image acquire with result {fenceCreateResult}.",
+                    PlantId)]);
+        }
+
         uint imageIndex = 0;
-        Result result = swapchainApi.AcquireNextImage(
-            plant.Device,
-            swapchain,
-            timeoutNanoseconds,
-            semaphoreSet.ImageAvailableSemaphore,
-            default,
-            ref imageIndex);
+        Result result;
+        try
+        {
+            result = swapchainApi.AcquireNextImage(
+                plant.Device,
+                swapchain,
+                timeoutNanoseconds,
+                default,
+                acquireFence,
+                ref imageIndex);
+
+            if (result is Result.Success or Result.SuboptimalKhr)
+            {
+                Result waitResult = plant.Vk.WaitForFences(plant.Device, 1, in acquireFence, true, timeoutNanoseconds);
+                if (waitResult != Result.Success)
+                {
+                    return new VulkanSwapchainAcquireResult(
+                        VulkanSwapchainAcquireStatus.Failed,
+                        null,
+                        [new VulkanPresentationDiagnostic(
+                            VulkanPresentationDiagnosticCodes.AcquireFailed,
+                            VulkanPresentationDiagnosticSeverity.Error,
+                            $"vkWaitForFences failed while waiting for acquired swapchain image {imageIndex} with result {waitResult}.",
+                            PlantId)]);
+                }
+            }
+        }
+        finally
+        {
+            if (acquireFence.Handle != 0 && plant.Device.Handle != 0)
+            {
+                plant.Vk.DestroyFence(plant.Device, acquireFence, (AllocationCallbacks*)null);
+            }
+        }
 
         return result switch
         {

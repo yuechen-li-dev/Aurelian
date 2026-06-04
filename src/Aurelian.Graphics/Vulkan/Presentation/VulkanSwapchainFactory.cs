@@ -107,6 +107,21 @@ public static unsafe class VulkanSwapchainFactory
                 return queryFailure!;
             }
 
+            ImageUsageFlags imageUsage = ImageUsageFlags.ColorAttachmentBit | ImageUsageFlags.TransferDstBit;
+            if ((capabilities.SupportedUsageFlags & imageUsage) != imageUsage)
+            {
+                surfaceCommands.DestroySurface(plant.Instance, surface, (AllocationCallbacks*)null);
+                surfaceCommands.Dispose();
+                window.Dispose();
+                return ResultWith(
+                    VulkanPresentationStatus.Rejected,
+                    diagnostics,
+                    VulkanPresentationDiagnosticCodes.SwapchainCreationFailed,
+                    VulkanPresentationDiagnosticSeverity.Error,
+                    $"Surface does not support swapchain image usage required by the compositor copy path. Supported usage: {capabilities.SupportedUsageFlags}; required usage: {imageUsage}.",
+                    plant.Context.Id);
+            }
+
             SurfaceFormatKHR selectedFormat = SelectSurfaceFormat(formats);
             PresentModeKHR selectedPresentMode = SelectPresentMode(presentModes, options.VSync);
             Extent2D extent = ChooseExtent(capabilities, options.Width, options.Height);
@@ -145,7 +160,7 @@ public static unsafe class VulkanSwapchainFactory
                 ImageColorSpace = selectedFormat.ColorSpace,
                 ImageExtent = extent,
                 ImageArrayLayers = 1,
-                ImageUsage = ImageUsageFlags.ColorAttachmentBit,
+                ImageUsage = imageUsage,
                 ImageSharingMode = SharingMode.Exclusive,
                 PreTransform = capabilities.CurrentTransform,
                 CompositeAlpha = SelectCompositeAlpha(capabilities.SupportedCompositeAlpha),

@@ -167,6 +167,24 @@ public sealed class VulkanRenderPassCommandM0Tests
         });
 
     [Fact]
+    public void VulkanRenderPassCommandEncoder_End_UpdatesAttachmentLayoutTrackersToFinalLayout()
+        => WithRenderPassCommandResources((plant, _, renderPass, framebuffer, commandBuffer) =>
+        {
+            Assert.Equal(VulkanResourceLayout.Undefined, framebuffer.Descriptor.ColorAttachments[0].LayoutTracker.Get(0, 0));
+            var encoder = new VulkanRenderPassCommandEncoder();
+
+            VulkanRenderPassBeginResult begin = encoder.Begin(
+                plant,
+                commandBuffer,
+                new VulkanRenderPassBeginRequest(renderPass, framebuffer, VulkanColorClearValue.TransparentBlack));
+            VulkanRenderPassCommandResult end = encoder.End(plant, commandBuffer, begin.Scope!.Value);
+
+            Assert.True(begin.Success, FormatDiagnostics(begin));
+            Assert.True(end.Success, FormatDiagnostics(end));
+            Assert.Equal(VulkanResourceLayout.ColorAttachment, framebuffer.Descriptor.ColorAttachments[0].LayoutTracker.Get(0, 0));
+        });
+
+    [Fact]
     public void VulkanRenderPassCommandEncoder_BeginEndRecords_WhenPlantCreated()
         => WithRenderPassCommandResources((plant, _, renderPass, framebuffer, commandBuffer) =>
         {

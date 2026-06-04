@@ -68,6 +68,17 @@ public sealed class VulkanLayoutTracker
         return VulkanBarrierPlanResult.Planned(plan, diagnostics);
     }
 
+    public bool TryMarkCurrentLayout(uint mipLevel, uint arrayLayer, VulkanResourceLayout layout)
+    {
+        if (!TryGetIndex(mipLevel, arrayLayer, out int index))
+        {
+            return false;
+        }
+
+        layouts[index] = layout;
+        return true;
+    }
+
     public VulkanBarrierBatch TransitionAll(string resourceName, VulkanResourceLayout newLayout)
     {
         List<VulkanBarrierPlan> plans = [];
