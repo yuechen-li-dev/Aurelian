@@ -214,3 +214,19 @@ Still deferred:
 - descriptor binding, render passes, pipelines, and draw paths.
 
 The recommended next step is `A31 — Staging buffer / device-local upload copy M0` so device-local buffers can be populated without weakening the mapped-allocation boundary.
+
+
+## 13. A31 staging buffer / device-local upload copy M0 note
+
+A31 adds the first device-local buffer population path while preserving the allocator contract from A28-A30. `Aurelian.Graphics.Vulkan.Resources.Uploads.VulkanBufferUploader` is per plant and depends on the plant, `IVulkanMemoryAllocator`, `VulkanCommandBufferPool`, and `VulkanFenceBundle`; it does not own those dependencies and introduces no global state.
+
+The M0 upload path is deliberately one-shot and synchronous:
+
+1. validate the destination plant, `TransferDestination` usage, non-empty data, and bounds;
+2. create a temporary mapped `CpuToGpu` staging buffer with `TransferSource` usage through `VulkanBufferFactory`;
+3. write bytes through `AurelianVulkanBuffer.Write(...)`;
+4. record `vkCmdCopyBuffer` into a command-buffer lease;
+5. submit to the plant queue and signal `CommandListFence`;
+6. wait for that timeline value before retiring the command buffer and disposing the staging buffer.
+
+This intentionally avoids unsafe staging lifetime: temporary staging memory is not freed until the GPU copy has completed. It also keeps raw allocation and mapping APIs isolated to allocator backends. Deferred work remains upload rings, batching, persistent staging pools, async/fence-retired staging, texture upload, barriers/layout tracking, non-coherent flush/invalidate policy, descriptors, swapchains/windows/surfaces, render passes, pipelines, and draws.

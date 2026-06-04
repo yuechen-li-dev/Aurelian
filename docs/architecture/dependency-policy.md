@@ -162,7 +162,7 @@ Examples:
 - World typed data stores should stay library-free for now.
 - Render snapshot and command-plan contracts are DTO-only in `Aurelian.Rendering.Contracts`.
 - The null renderer is implemented in `Aurelian.Rendering.Null` as a headless backend over command plans. World-to-render extraction now exists in `Aurelian.Runtime.Rendering`, so `WorldDataDocument -> RenderSnapshot -> RenderCommandPlan -> NullRenderer` is testable headlessly.
-- `Aurelian.Graphics` now owns the first graphics HAL scaffold, native-free plant registry, Vulkan instance/device initialization M0 for plant 0, optional per-plant timeline fence bundles, a pure managed fence-tagged resource pool, a per-plant Vulkan command pool / primary command buffer lease M0, Vulkan allocator contracts with an isolated raw backend, Vulkan Buffer resource M0 over `IVulkanMemoryAllocator`, and A30 mapped CPU writes for host-visible buffers. `PlantId.Zero` represents the single-GPU plant in M0; successful Vulkan creation is per-plant, requires timeline semaphores, records plain facts/diagnostics, and keeps window/surface/swapchain/texture/rendering work deferred. VMA remains backend plumbing, not architecture.
+- `Aurelian.Graphics` now owns the first graphics HAL scaffold, native-free plant registry, Vulkan instance/device initialization M0 for plant 0, optional per-plant timeline fence bundles, a pure managed fence-tagged resource pool, a per-plant Vulkan command pool / primary command buffer lease M0, Vulkan allocator contracts with an isolated raw backend, Vulkan Buffer resource M0 over `IVulkanMemoryAllocator`, A30 mapped CPU writes for host-visible buffers, and A31 one-shot staging-to-device-local buffer uploads through allocator/buffer/command/fence seams. `PlantId.Zero` represents the single-GPU plant in M0; successful Vulkan creation is per-plant, requires timeline semaphores, records plain facts/diagnostics, and keeps window/surface/swapchain/texture/rendering work deferred. VMA remains backend plumbing, not architecture.
 - Visual render backends can later use Silk.NET first behind `Aurelian.Graphics`; Vortice remains deferred.
 - Physics can later use BEPU behind `Aurelian.Physics.*`.
 - Navigation can later use DotRecast behind `Aurelian.Navigation.*`.
@@ -174,3 +174,10 @@ Examples:
 A30 keeps CPU upload support inside existing dependency boundaries. The implementation uses Silk.NET Vulkan only at the backend edge and introduces no VMA/VMASharp, Vortice, global allocator, service locator, staging copy subsystem, textures, swapchain/window/surface, render pass, pipeline, or draw dependencies.
 
 Mapped memory is represented through Aurelian-owned allocation and buffer contracts. Only allocator backends may call `vkMapMemory`/`vkUnmapMemory`; buffer code receives writability facts and performs bounds-checked writes through `AurelianVulkanBuffer.Write(...)` rather than owning raw memory allocation or mapping policy.
+
+
+## A31 graphics upload dependency note
+
+A31 keeps device-local buffer upload support inside the existing Aurelian-owned dependency boundaries. The upload helper may record `vkCmdCopyBuffer` and submit a command buffer, but it does not allocate, free, map, or unmap raw memory directly; staging memory is created through `VulkanBufferFactory` and `IVulkanMemoryAllocator`, and CPU writes go through `AurelianVulkanBuffer.Write(...)`. Command recording uses `VulkanCommandBufferPool`, and synchronization uses `VulkanFenceBundle.CommandListFence`.
+
+The M0 upload path is intentionally synchronous: it waits for the submitted timeline fence value before disposing temporary staging resources. Upload rings, batching, persistent staging pools, async fence-retired staging, texture uploads, barriers/layout tracking, and renderer-facing draw infrastructure remain future work rather than new dependency policy.

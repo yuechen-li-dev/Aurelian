@@ -91,3 +91,10 @@ The next implementation step should be A30 Buffer mapped memory / upload M0 so C
 A30 adds safe host-visible buffer writes to `Aurelian.Graphics`. Allocation requests can opt into persistent mapping with `MapOnCreate` for `CpuToGpu`/`GpuToCpu` memory, `GpuOnly` mapping is rejected with diagnostics, and raw Vulkan map/unmap calls remain isolated to `RawVulkanMemoryAllocator`. `AurelianVulkanBuffer.Write(ReadOnlySpan<byte>, ulong)` is the M0 CPU upload API for mapped buffers and performs disposed, mapped/writable, and bounds checks before copying bytes.
 
 A30 deliberately does not add staging-to-device-local copies, command buffer upload submission, an upload ring, non-coherent flush/invalidate support, textures, descriptor binding, render passes, pipelines, drawing, swapchains/windows/surfaces, VMA/VMASharp, or Vortice. The recommended next milestone is `A31 — Staging buffer / device-local upload copy M0`.
+
+
+## A31 — Staging buffer / device-local upload copy M0
+
+A31 adds the first real CPU-to-GPU device-local buffer upload path in `Aurelian.Graphics`. The one-shot `VulkanBufferUploader` validates a destination buffer, creates a mapped `CpuToGpu` transfer-source staging buffer through `VulkanBufferFactory` and `IVulkanMemoryAllocator`, writes bytes through `AurelianVulkanBuffer.Write(...)`, records `vkCmdCopyBuffer` into a lease from `VulkanCommandBufferPool`, submits the command buffer to the plant queue, signals `VulkanFenceBundle.CommandListFence`, waits synchronously for that timeline value, retires the command buffer, and disposes staging resources only after completion.
+
+A31 deliberately keeps M0 narrow: no upload ring, persistent staging allocator, batching, async fence-retired staging resources, texture upload, descriptor binding, swapchain/window/surface, render pass, pipeline, draw path, VMA/VMASharp, Vortice, or cross-module renderer dependency is added. The recommended next milestone is `A32 — Barrier/layout tracker M0` because later texture/resource work will need explicit transition infrastructure.
