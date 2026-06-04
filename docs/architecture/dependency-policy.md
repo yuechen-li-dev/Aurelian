@@ -223,3 +223,10 @@ The M0 path supports one color attachment and no framebuffer cache. It does not 
 ## A38 render pass command dependency note
 
 A38 keeps the Vulkan command path on the existing `Silk.NET.Vulkan` dependency. Render pass begin/end emission is implemented behind Aurelian-owned request/result/diagnostic types under `Aurelian.Graphics.Vulkan.Commanding.RenderPasses`; it does not introduce VMA/VMASharp, Vortice, service locators, reflection-based construction, swapchain/window/surface dependencies, or vendor code changes.
+
+
+## A39 graphics pipeline dependency note
+
+A39 keeps graphics pipeline creation inside the existing `Aurelian.Graphics` Vulkan backend boundary. Public pipeline inputs are Aurelian-owned records: raw SPIR-V word arrays per shader stage, stage kind and entry point metadata, vertex buffer layouts, vertex attributes, and narrow fixed-state toggles. Silk.NET Vulkan is used only at the native edge to create/destroy `VkShaderModule`, `VkPipelineLayout`, and `VkPipeline`; raw handles remain internal owner details.
+
+The shader boundary is intentionally explicit and temporary: A39 consumes SPIR-V artifacts but does not produce them. SDSL-V remains Aurelian's source language, while the planned compiler-facing path is `SDSL-V -> HLSL or Slang -> DXC -> SPIR-V artifact -> Vulkan pipeline creation`. A39 adds no direct SDSL-V-to-SPIR-V path and no DXC, Vortice.Dxc, Vortice.Vulkan, assets/shaders project dependency, descriptor sets, push constants, uniform buffers, draw commands, pipeline bind commands, swapchain/window/surface, VMA/VMASharp, service locator, reflection, vendor/reference-code dependency, or global singleton.

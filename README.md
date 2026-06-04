@@ -116,3 +116,9 @@ A37 adds Vulkan framebuffer M0 in `Aurelian.Graphics`: an explicit `VulkanFrameb
 ## A38 render pass begin/end command M0 status
 
 A38 adds Vulkan render pass begin/end command M0 in `Aurelian.Graphics`: command buffers can now enter and leave an existing compatible render pass/framebuffer with one color clear value. The encoder validates recording state, plant compatibility, render pass/framebuffer ownership and lifetime, render pass/framebuffer compatibility, double-begin, and end-without-begin. It records `vkCmdBeginRenderPass` and `vkCmdEndRenderPass` only; graphics pipelines, draw commands, vertex/index binding, descriptor sets, framebuffer caching, swapchains/windows/surfaces, depth/stencil, MSAA, VMA/VMASharp, and Vortice remain deferred.
+
+## A39 graphics pipeline descriptor/state M0 status
+
+A39 adds Vulkan graphics pipeline descriptor/state M0 in `Aurelian.Graphics`: raw per-stage SPIR-V word descriptors for exactly one vertex shader and one fragment shader, optional vertex buffer/attribute descriptors, validation diagnostics, empty `VkPipelineLayout` creation, temporary `VkShaderModule` creation/destruction, native `VkPipeline` creation against an explicit render pass, and idempotent pipeline/layout ownership. Raw SPIR-V inputs are temporary explicit artifacts for the Vulkan backend; SDSL-V compilation remains future work through `SDSL-V -> HLSL or Slang -> DXC -> SPIR-V artifact -> Vulkan pipeline creation`, with no direct SDSL-V-to-SPIR-V plan.
+
+A39 deliberately adds no SDSL-V integration, DXC/Vortice.Dxc, assets/shaders project dependency, descriptor sets, uniform buffers, push constants, pipeline bind command, vertex binding command, draw command, pipeline cache, swapchain/window/surface, VMA/VMASharp, Vortice.Vulkan, global singleton, service locator, reflection, or vendor/reference-code dependency.
