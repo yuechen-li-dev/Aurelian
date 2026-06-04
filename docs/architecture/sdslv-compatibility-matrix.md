@@ -114,3 +114,9 @@ This is intentionally not SDSL-V integration yet. The SDSL-V path remains `SDSL-
 A42 connects the existing SDSL-V parser, validator, and HLSL emitter to the A41 SPIR-V shader artifact layer under `Aurelian.Shaders.Language.Artifacts.SdslvSpirv`. The artifact path records source name, lowercase UTF-8 SHA-256 source hash, generated HLSL, optional nested HLSL/SPIR-V artifact data, and diagnostics. JSON output is deterministic and retains HLSL inline for M0 traceability.
 
 The M0 stage extractor is deliberately simple: it requires generated HLSL entry points named `VSMain` and `PSMain`, emits `vs_6_0` and `ps_6_0` stage sources, and then delegates to DXC through the A41 artifact layer. The smoke path uses temporary HLSL semantic conventions (`VertexInput.Position -> POSITION`, `VertexOutput.Position -> SV_Position`, `Color -> COLOR0`, and `PSMain` `float4` returns -> `SV_Target0`) until SDSL-V has explicit semantic metadata. Direct SDSL-V -> SPIR-V and graphics/runtime integration remain out of scope.
+
+## A43 compiled shader contract note
+
+A43 does not change SDSL-V syntax, parsing, validation, HLSL emission, or WyrmCoil compatibility. It adds a downstream contract bridge: successful A42 `SdslvSpirvShaderArtifact` values can be exported by `Aurelian.Shaders` into neutral `Aurelian.Rendering.Contracts.Shaders` compiled shader programs, and `Aurelian.Graphics` can map those neutral programs to Vulkan stage descriptors without referencing `Aurelian.Shaders`.
+
+The SDSL-V compiler-facing path remains `SDSL-V -> HLSL -> DXC -> SPIR-V artifact -> neutral compiled shader contract -> graphics pipeline descriptor`. Runtime shader compilation, asset/TOML integration, and direct SDSL-V-to-Vulkan pipeline creation remain deferred.

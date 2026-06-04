@@ -195,3 +195,11 @@ Status: implemented.
 A42 implements the shader/compiler-side SDSL-V to SPIR-V artifact bridge in `Aurelian.Shaders`. The M0 path parses and validates `.sdslv` source, emits traceable HLSL, extracts conventional `VSMain`/`PSMain` stage sources, and reuses the A41 HLSL-to-SPIR-V artifact layer to produce typed stage bytes, hashes, diagnostics, and deterministic JSON when DXC is available. Missing DXC remains an availability diagnostic rather than a normal test failure.
 
 A42 deliberately does not integrate with assets/TOML, Vulkan pipeline creation, swapchains, windows, or runtime graphics. Direct SDSL-V to SPIR-V remains out of scope; A43 should make the graphics pipeline consume existing SPIR-V artifact bytes rather than importing compiler dependencies.
+
+## A43 — Compiled shader stage contract M0
+
+Status: implemented.
+
+A43 bridges A42 shader artifacts to A39 graphics pipeline descriptors without creating a direct shader/graphics dependency. `Aurelian.Rendering.Contracts.Shaders` defines neutral compiled shader DTOs for programs, stages, status, diagnostics, and format versioning. `Aurelian.Shaders.Language.Artifacts.Compiled` exports `SpirvShaderArtifact` and `SdslvSpirvShaderArtifact` into those DTOs after validating artifact success, non-empty stages, duplicate stages, entry points, SPIR-V bytes, and SHA-256 metadata. `Aurelian.Graphics.Vulkan.Pipelines.Graphics.VulkanCompiledShaderStageMapper` consumes only the neutral DTOs and maps vertex/fragment stages to `VulkanShaderStageDescriptor` values after rejecting compute stages for graphics M0 and validating SPIR-V byte shape/magic before little-endian word conversion.
+
+A43 deliberately does not make `Aurelian.Graphics` reference `Aurelian.Shaders`, does not make `Aurelian.Shaders` reference `Aurelian.Graphics`, and does not add DXC/runtime compilation to graphics. Asset/TOML shader integration, descriptor sets, draw commands, swapchains/windows/surfaces, and direct SDSL-V-to-pipeline creation remain deferred. Recommended next milestone: `A44 — Pipeline consumes compiled shader program M0`.
