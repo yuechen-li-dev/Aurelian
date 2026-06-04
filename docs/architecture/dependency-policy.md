@@ -264,3 +264,23 @@ The A42 stage extraction is intentionally convention-based M0 metadata: generate
 A43 establishes the neutral handoff for compiled shader data. `Aurelian.Rendering.Contracts` may define `Aurelian.Rendering.Contracts.Shaders` DTOs because they are plain contract records/enums and contain no compiler, Vulkan, Silk, DXC, graphics backend, asset, or runtime handles. `Aurelian.Shaders` may reference `Aurelian.Rendering.Contracts` to export SPIR-V shader artifacts into compiled shader contracts. `Aurelian.Graphics` may reference `Aurelian.Rendering.Contracts` to map compiled shader contracts into Vulkan pipeline stage descriptors.
 
 The forbidden edges remain forbidden: `Aurelian.Graphics` must not reference `Aurelian.Shaders`, `Aurelian.Shaders` must not reference `Aurelian.Graphics`, and graphics must not depend on DXC, SDSL-V parsers, HLSL emitters, or runtime shader compilation. The compiled shader contract bridge is an artifact-consumption seam, not an asset pipeline or shader compiler integration inside the graphics backend.
+
+## A44 graphics compiled shader consumption boundary
+
+A44 keeps shader compilation and graphics pipeline creation separated by the neutral `Aurelian.Rendering.Contracts.Shaders` layer. `Aurelian.Graphics` may consume `CompiledShaderProgram` values, map their SPIR-V bytes into Vulkan shader stage descriptors, and build a `VulkanGraphicsPipelineDescriptor` or native Vulkan pipeline through existing graphics factories. It must not reference `Aurelian.Shaders`, call DXC, inspect SDSL-V artifacts, or depend on shader compiler package types.
+
+The allowed dependency direction remains:
+
+```text
+Aurelian.Shaders -> Aurelian.Rendering.Contracts <- Aurelian.Graphics
+```
+
+The disallowed directions remain:
+
+```text
+Aurelian.Graphics -> Aurelian.Shaders
+Aurelian.Shaders -> Aurelian.Graphics
+Aurelian.Graphics -> DXC/SDSL-V compiler packages
+```
+
+A44 does not authorize asset/TOML integration, draw/bind commands, descriptor sets, uniforms/push constants, surfaces, swapchains, windows, Vortice, or VMA adoption.

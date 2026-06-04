@@ -120,3 +120,15 @@ The M0 stage extractor is deliberately simple: it requires generated HLSL entry 
 A43 does not change SDSL-V syntax, parsing, validation, HLSL emission, or WyrmCoil compatibility. It adds a downstream contract bridge: successful A42 `SdslvSpirvShaderArtifact` values can be exported by `Aurelian.Shaders` into neutral `Aurelian.Rendering.Contracts.Shaders` compiled shader programs, and `Aurelian.Graphics` can map those neutral programs to Vulkan stage descriptors without referencing `Aurelian.Shaders`.
 
 The SDSL-V compiler-facing path remains `SDSL-V -> HLSL -> DXC -> SPIR-V artifact -> neutral compiled shader contract -> graphics pipeline descriptor`. Runtime shader compilation, asset/TOML integration, and direct SDSL-V-to-Vulkan pipeline creation remain deferred.
+
+## A44 graphics pipeline consumption note
+
+A44 does not change SDSL-V syntax, parsing, validation, HLSL emission, artifact production, or WyrmCoil compatibility. It extends only the downstream graphics consumption side: a neutral `CompiledShaderProgram` can now become a Vulkan graphics pipeline descriptor, and optionally a native Vulkan pipeline, inside `Aurelian.Graphics`.
+
+The SDSL-V path remains compiler-side and indirect:
+
+```text
+SDSL-V -> HLSL -> DXC -> SPIR-V artifact -> neutral compiled shader contract -> Vulkan graphics pipeline descriptor/native helper
+```
+
+There is still no runtime DXC invocation from graphics, no direct `Aurelian.Graphics`/`Aurelian.Shaders` project reference, no direct SDSL-V-to-Vulkan path, no asset/TOML bridge, and no draw or pipeline bind commands.
