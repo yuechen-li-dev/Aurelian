@@ -160,3 +160,12 @@ A38 adds the first render-pass boundary command helper in `Aurelian.Graphics`. `
 The command model intentionally remains narrow. The encoder keeps active render-pass state local to the encoder instance, validates that the command buffer is recording, validates plant compatibility, validates render pass/framebuffer lifetime and ownership, rejects framebuffers created for another render pass, rejects double-begin, and rejects end-without-begin. Tests still skip cleanly when Vulkan is unavailable.
 
 Still deferred: graphics pipeline descriptors/state, pipeline binding, draw commands, vertex/index binding, descriptor sets, framebuffer caches, depth/stencil, MSAA, swapchains/windows/surfaces, VMA/VMASharp, and Vortice.
+
+
+## A39 graphics pipeline descriptor/state M0 note
+
+A39 adds explicit graphics pipeline descriptors and native Vulkan graphics pipeline creation under `Aurelian.Graphics.Vulkan.Pipelines.Graphics`. The M0 descriptor accepts raw per-stage SPIR-V word arrays plus stage metadata, requires exactly one vertex stage and one fragment stage, validates entry points and SPIR-V presence, and supports an optional vertex input model with `Float2`, `Float3`, and `Float4` vertex attributes at vertex input rate. Pipeline state is intentionally narrow: triangle list, fill rasterization, no culling, counter-clockwise front faces, dynamic viewport/scissor, one color attachment with blending disabled, sample count 1, and no depth/stencil.
+
+The native path creates temporary `VkShaderModule` objects, an empty `VkPipelineLayout` with no descriptor set layouts and no push constants, and a `VkPipeline` tied to an explicit existing A36 render pass. Shader modules are destroyed after pipeline creation, while `AurelianVulkanGraphicsPipeline` owns and idempotently destroys the pipeline and layout. This avoids Stride's all-stages-share-one-bytecode constraint, implicit render pass creation inside pipeline state, descriptor set layout magic, unconditional depth bias, and hidden shader compiler coupling.
+
+A39 does not add SDSL-V integration, DXC/Vortice.Dxc, shader/assets dependencies, descriptor sets, uniform buffers, push constants, draw commands, pipeline binding, vertex binding command emission, pipeline cache, swapchain/window/surface, VMA/VMASharp, or Vortice.Vulkan. The intended shader artifact path remains future work: `SDSL-V -> HLSL or Slang -> DXC -> SPIR-V artifact -> Vulkan pipeline creation`; there is no direct SDSL-V-to-SPIR-V plan. Recommended next step: `A40 — Vortice.Dxc package spike / DXC backend audit`.
