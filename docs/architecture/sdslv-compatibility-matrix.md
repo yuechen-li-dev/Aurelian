@@ -93,3 +93,10 @@ Aurelian may support `.sdslvtest` files analogous to `.octest` by porting the Oc
 - Parser/validation M2 for flow, utility, and any remaining fallibility details.
 - Future artifact schema revisions that may split HLSL out of JSON.
 - Shader fixtures that exercise accepted Aurelian syntax and documented WyrmCoil compatibility cases.
+
+
+## A40 shader compiler toolchain note
+
+A40 does not change SDSL-V syntax or semantic compatibility. It records the compiler-facing artifact direction: Aurelian SDSL-V should lower through HLSL or Slang as MIR, then invoke DXC as a build/tool subprocess to produce SPIR-V artifacts. Direct SDSL-V -> SPIR-V generation is not planned.
+
+`Microsoft.Direct3D.DXC` is intentionally scoped to `Aurelian.Shaders` tooling; `Aurelian.Graphics` remains DXC-free and consumes only SPIR-V bytes plus stage/entry/hash/reflection metadata. `Vortice.Dxc` remains deferred unless subprocess DXC proves insufficient.
