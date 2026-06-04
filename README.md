@@ -107,3 +107,6 @@ A34 remains deliberately narrow. It records buffer memory barriers and color ima
 
 
 A35 adds the first whole Texture2D upload path in `Aurelian.Graphics`: CPU RGBA bytes move through a mapped `CpuToGpu` staging buffer, image barriers transition `Undefined -> TransferDestination -> ShaderResourceFragment`, `vkCmdCopyBufferToImage` submits to the plant queue, the command-list timeline fence is signaled and waited synchronously, and staging resources are disposed only after completion. M0 supports whole Texture2D mip0/layer0 four-byte color formats only; mip generation, partial uploads, arrays/cubes, samplers/descriptors, upload rings, render passes, pipelines, draws, swapchains/windows/surfaces, VMA/VMASharp, and Vortice remain deferred.
+
+
+A36 adds explicit Vulkan render pass descriptor M0 in `Aurelian.Graphics`: render pass attachments are Aurelian-owned plain data with format, load/store ops, and initial/final layouts; the factory compiles the one-color-attachment M0 descriptor to a native `VkRenderPass`; and `AurelianVulkanRenderPass` owns idempotent destruction. Framebuffers, pipelines, draw commands, render-pass begin/end commands, swapchains/windows/surfaces, MSAA, and depth/stencil remain deferred.

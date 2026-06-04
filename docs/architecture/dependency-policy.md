@@ -206,3 +206,10 @@ This milestone does not introduce VMA/VMASharp, Vortice, global services, reflec
 A35 keeps texture upload inside the existing `Aurelian.Graphics` Vulkan backend boundary. `VulkanTextureUploader` creates temporary staging through `VulkanBufferFactory` and `IVulkanMemoryAllocator`, writes through `AurelianVulkanBuffer.Write(...)`, emits image barriers through `VulkanBarrierCommandEmitter`, records `vkCmdCopyBufferToImage`, submits through the plant queue, and synchronously waits `VulkanFenceBundle.CommandListFence` before staging disposal.
 
 The upload helper does not allocate/free/map/unmap raw memory directly and does not introduce VMA/VMASharp, Vortice, global services, reflection, descriptor systems, samplers, render passes, pipelines, draw commands, swapchains/windows/surfaces, upload rings, or cross-module dependencies on world/assets/shaders/null rendering/vendor/reference code. Whole Texture2D mip0/layer0 four-byte color uploads are the only supported M0 capability.
+
+
+## A36 render pass descriptor dependency note
+
+A36 keeps render pass ownership inside `Aurelian.Graphics` and behind Aurelian-owned records/results. The public descriptor is plain data and does not expose Silk.NET structs; Silk.NET Vulkan is used only at the native compilation/disposal edge that creates and destroys `VkRenderPass`. This preserves the policy that external/native libraries are plumbing dependencies, not architecture-defining contracts.
+
+The M0 render pass path does not add VMA/VMASharp, Vortice, global service locators, reflection, framebuffer/pipeline/draw abstractions, or swapchain/window/surface dependencies. Future pipeline compatibility keys can derive from the descriptor data/hash rather than from hidden backend state.

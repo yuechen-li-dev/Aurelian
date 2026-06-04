@@ -264,3 +264,10 @@ A35 extends the allocation/upload boundary from buffers to whole Texture2D data 
 The upload command path records image layout barriers around `vkCmdCopyBufferToImage`: the destination moves from its tracked layout to `TransferDestination`, receives the whole mip0/layer0 copy, and then moves to `ShaderResourceFragment`. The helper submits to the plant queue, signals `CommandListFence`, waits synchronously, retires the command buffer with the signal value, and disposes staging only after GPU completion.
 
 Supported in M0: whole Texture2D mip 0, array layer 0, four bytes per pixel (`Rgba8/Bgra8` unorm/srgb family), final `ShaderResourceFragment` layout. Deferred: mip generation, partial uploads, arrays/cubes/3D textures, upload rings, async staging retirement, samplers, descriptor sets, render passes, pipelines, draw commands, swapchains/windows/surfaces, VMA/VMASharp, and Vortice. As in A34, layout planning mutates the tracker before emission; rollback/reconciliation after rare emission failures remains deferred to a future transactional barrier API.
+
+
+## 18. A36 render pass descriptor M0 allocation note
+
+A36 adds native `VkRenderPass` creation/disposal but does not allocate GPU memory. Render pass descriptors are explicit plain data and the native owner destroys only the render pass handle; it does not create framebuffers, images, image views, pipelines, command buffers, swapchains/windows/surfaces, or allocator-backed resources.
+
+This means the A28-A35 allocation boundary remains unchanged: texture and buffer resources continue to own allocator-backed memory, raw Vulkan memory calls remain isolated to allocator backends, and render pass compatibility/state is represented separately from memory ownership. M0 supports one color attachment descriptor and defers depth/stencil, MSAA, multiple color attachments, framebuffer objects, and render commands.

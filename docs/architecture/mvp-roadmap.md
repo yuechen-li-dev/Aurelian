@@ -139,3 +139,10 @@ The M0 upload path is synchronous and intentionally narrow:
 7. submit to the plant queue, signal `CommandListFence`, wait for the signal value, retire the command buffer, and only then dispose the staging buffer.
 
 A35 deliberately defers mip generation, partial region uploads, texture arrays/cubes/3D uploads, samplers, descriptor sets, render passes, pipelines, draw commands, swapchains/windows/surfaces, upload rings, async staging retirement, VMA/VMASharp, and Vortice.
+
+
+## 18. A36 render pass descriptor M0 note
+
+A36 introduces `Aurelian.Graphics.Vulkan.Pipelines.RenderPasses` as the first explicit render-pass boundary. A render pass is described as Aurelian-owned plain data: one M0 color attachment with a `VulkanTextureFormat`, caller-selected `VulkanAttachmentLoadOp` / `VulkanAttachmentStoreOp`, and initial/final `VulkanResourceLayout` values. This deliberately avoids Stride's implicit render pass creation inside pipeline state and avoids hardcoding `Load` for every attachment.
+
+`VulkanRenderPassFactory` validates the descriptor, maps Aurelian format/layout/load-store facts to Silk.NET Vulkan facts, creates a single graphics subpass, and returns an `AurelianVulkanRenderPass` owner that destroys the native `VkRenderPass` idempotently. M0 supports exactly one color attachment; multiple render targets, depth/stencil, MSAA, framebuffer creation, pipeline creation, draw commands, render-pass begin/end command-list integration, and swapchains/windows/surfaces remain deferred. The recommended next milestone is `A37 — Framebuffer M0`, because a native render pass now exists and a framebuffer is the next Vulkan object required before command-list render pass begin/end work.
