@@ -218,3 +218,11 @@ Dependency intent:
 - Draw commands, pipeline bind commands, descriptor sets, uniforms/push constants, assets/TOML, and swapchain/window/surface remain deferred.
 
 Recommended next milestone: **A45 — Pipeline bind + draw command M0**, because pipelines can now be built from neutral compiled shader programs, but command recording still cannot bind a graphics pipeline or issue a draw.
+
+## A45 — Pipeline bind + vertex draw command M0
+
+Status: implemented.
+
+A45 records the first explicit draw-command shape in `Aurelian.Graphics`: render pass begin returns a typed `VulkanRenderPassScope`, the command buffer lease owns minimal active render-pass state, render pass end validates and clears the supplied scope, and `VulkanDrawCommandEncoder.DrawVertices(...)` validates and records viewport/scissor, graphics pipeline bind, one vertex buffer bind at binding 0/offset 0, and a non-indexed `vkCmdDraw` with instance count 1 and first instance 0.
+
+The milestone remains intentionally pre-presentation and pre-material: there is no swapchain/window/surface, no render-target presentation, no descriptor sets, no uniform buffers, no push constants, no index buffers, no multiple vertex buffers, no pipeline cache, and no `RenderCommandPlan` execution yet. The recommended follow-up is A46 — Valid SPIR-V fixture / first offscreen draw recording proof, so the native success path can be proven without coupling graphics tests to shader compiler projects.

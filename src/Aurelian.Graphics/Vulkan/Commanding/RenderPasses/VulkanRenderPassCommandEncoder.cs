@@ -1,18 +1,12 @@
 using Aurelian.Graphics.Plants;
 using Aurelian.Graphics.Vulkan.Device;
-using Aurelian.Graphics.Vulkan.Pipelines.Framebuffers;
-using Aurelian.Graphics.Vulkan.Pipelines.RenderPasses;
 using Silk.NET.Vulkan;
 
 namespace Aurelian.Graphics.Vulkan.Commanding.RenderPasses;
 
 public sealed unsafe class VulkanRenderPassCommandEncoder
 {
-    private CommandBuffer activeCommandBuffer;
-    private AurelianVulkanRenderPass? activeRenderPass;
-    private AurelianVulkanFramebuffer? activeFramebuffer;
-
-    public VulkanRenderPassCommandResult Begin(
+    public VulkanRenderPassBeginResult Begin(
         AurelianVulkanPlant plant,
         VulkanCommandBufferLease commandBuffer,
         VulkanRenderPassBeginRequest request)
@@ -25,7 +19,7 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
         ValidateBegin(plant, commandBuffer, request, diagnostics);
         if (diagnostics.Any(static diagnostic => diagnostic.Severity == VulkanRenderPassCommandDiagnosticSeverity.Error))
         {
-            return new VulkanRenderPassCommandResult(VulkanRenderPassCommandStatus.Rejected, diagnostics);
+            return new VulkanRenderPassBeginResult(VulkanRenderPassCommandStatus.Rejected, null, diagnostics);
         }
 
         try
@@ -44,11 +38,8 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
             };
 
             plant.Vk.CmdBeginRenderPass(commandBuffer.CommandBuffer, &beginInfo, SubpassContents.Inline);
-
-            activeCommandBuffer = commandBuffer.CommandBuffer;
-            activeRenderPass = request.RenderPass;
-            activeFramebuffer = request.Framebuffer;
-            return VulkanRenderPassCommandResult.Recorded(diagnostics);
+            VulkanRenderPassScope scope = commandBuffer.MarkRenderPassActive(plant.Context.Id);
+            return VulkanRenderPassBeginResult.Recorded(scope, diagnostics);
         }
         catch (Exception exception)
         {
@@ -56,19 +47,20 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
                 VulkanRenderPassCommandDiagnosticCodes.BeginRenderPassFailed,
                 $"vkCmdBeginRenderPass failed: {exception.Message}",
                 plant.Context.Id));
-            return new VulkanRenderPassCommandResult(VulkanRenderPassCommandStatus.Failed, diagnostics);
+            return new VulkanRenderPassBeginResult(VulkanRenderPassCommandStatus.Failed, null, diagnostics);
         }
     }
 
     public VulkanRenderPassCommandResult End(
         AurelianVulkanPlant plant,
-        VulkanCommandBufferLease commandBuffer)
+        VulkanCommandBufferLease commandBuffer,
+        VulkanRenderPassScope scope)
     {
         ArgumentNullException.ThrowIfNull(plant);
         ArgumentNullException.ThrowIfNull(commandBuffer);
 
         List<VulkanRenderPassCommandDiagnostic> diagnostics = [];
-        ValidateEnd(plant, commandBuffer, diagnostics);
+        ValidateEnd(plant, commandBuffer, scope, diagnostics);
         if (diagnostics.Any(static diagnostic => diagnostic.Severity == VulkanRenderPassCommandDiagnosticSeverity.Error))
         {
             return new VulkanRenderPassCommandResult(VulkanRenderPassCommandStatus.Rejected, diagnostics);
@@ -77,9 +69,7 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
         try
         {
             plant.Vk.CmdEndRenderPass(commandBuffer.CommandBuffer);
-            activeCommandBuffer = default;
-            activeRenderPass = null;
-            activeFramebuffer = null;
+            _ = commandBuffer.TryClearRenderPass(scope);
             return VulkanRenderPassCommandResult.Recorded(diagnostics);
         }
         catch (Exception exception)
@@ -92,7 +82,7 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
         }
     }
 
-    private void ValidateBegin(
+    private static void ValidateBegin(
         AurelianVulkanPlant plant,
         VulkanCommandBufferLease commandBuffer,
         VulkanRenderPassBeginRequest request,
@@ -101,11 +91,11 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
         PlantId plantId = plant.Context.Id;
         ValidatePlantAndCommandBuffer(plant, commandBuffer, diagnostics);
 
-        if (activeRenderPass is not null)
+        if (commandBuffer.HasActiveRenderPass)
         {
             diagnostics.Add(Diagnostic(
                 VulkanRenderPassCommandDiagnosticCodes.RenderPassAlreadyActive,
-                "Cannot begin a render pass while this encoder already has an active render pass.",
+                "Cannot begin a render pass while this command buffer lease already has an active render pass.",
                 plantId));
         }
 
@@ -150,7 +140,7 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
         {
             diagnostics.Add(Diagnostic(
                 VulkanRenderPassCommandDiagnosticCodes.PlantMismatch,
-                "Render pass and framebuffer must belong to the target Vulkan plant.",
+                "Render pass, framebuffer, and command buffer plant ownership must match the target plant.",
                 plantId));
         }
 
@@ -158,41 +148,35 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
         {
             diagnostics.Add(Diagnostic(
                 VulkanRenderPassCommandDiagnosticCodes.RenderPassFramebufferMismatch,
-                "Framebuffer must have been created for the render pass passed to begin.",
+                "Framebuffer was not created for the render pass supplied to begin.",
                 plantId));
         }
     }
 
-    private void ValidateEnd(
+    private static void ValidateEnd(
         AurelianVulkanPlant plant,
         VulkanCommandBufferLease commandBuffer,
+        VulkanRenderPassScope scope,
         List<VulkanRenderPassCommandDiagnostic> diagnostics)
     {
+        PlantId plantId = plant.Context.Id;
         ValidatePlantAndCommandBuffer(plant, commandBuffer, diagnostics);
 
-        if (activeRenderPass is null)
+        if (!commandBuffer.HasActiveRenderPass)
         {
             diagnostics.Add(Diagnostic(
                 VulkanRenderPassCommandDiagnosticCodes.NoActiveRenderPass,
-                "Cannot end a render pass because this encoder has no active render pass.",
-                plant.Context.Id));
+                "Cannot end a render pass because the command buffer lease has no active render pass.",
+                plantId));
             return;
         }
 
-        if (activeCommandBuffer.Handle != commandBuffer.CommandBuffer.Handle)
+        if (scope.PlantId != plantId || scope.CommandBufferLeaseId != commandBuffer.LeaseId || !commandBuffer.IsActiveScope(scope))
         {
             diagnostics.Add(Diagnostic(
-                VulkanRenderPassCommandDiagnosticCodes.RenderPassFramebufferMismatch,
-                "Cannot end a render pass from a command buffer other than the one used to begin it.",
-                plant.Context.Id));
-        }
-
-        if (activeRenderPass.PlantId != plant.Context.Id || activeFramebuffer?.PlantId != plant.Context.Id)
-        {
-            diagnostics.Add(Diagnostic(
-                VulkanRenderPassCommandDiagnosticCodes.PlantMismatch,
-                "Active render pass state does not belong to the target Vulkan plant.",
-                plant.Context.Id));
+                VulkanRenderPassCommandDiagnosticCodes.InvalidRenderPassScope,
+                "Cannot end a render pass with a scope that is not active on this command buffer lease.",
+                plantId));
         }
     }
 
@@ -214,7 +198,7 @@ public sealed unsafe class VulkanRenderPassCommandEncoder
         {
             diagnostics.Add(Diagnostic(
                 VulkanRenderPassCommandDiagnosticCodes.PlantMismatch,
-                $"Command buffer plant {commandBuffer.PlantId} does not match Vulkan plant {plantId}.",
+                "Command buffer plant ownership must match the target plant.",
                 plantId));
         }
 

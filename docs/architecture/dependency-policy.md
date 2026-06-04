@@ -284,3 +284,9 @@ Aurelian.Graphics -> DXC/SDSL-V compiler packages
 ```
 
 A44 does not authorize asset/TOML integration, draw/bind commands, descriptor sets, uniforms/push constants, surfaces, swapchains, windows, Vortice, or VMA adoption.
+
+## A45 draw command dependency note
+
+A45 keeps draw recording inside the existing `Aurelian.Graphics` Vulkan backend boundary. Render pass scope tokens, draw requests, diagnostics, and results are Aurelian-owned contracts; Silk.NET Vulkan appears only at the native command emission edge for `vkCmdSetViewport`, `vkCmdSetScissor`, `vkCmdBindPipeline`, `vkCmdBindVertexBuffers`, and `vkCmdDraw`.
+
+The draw encoder consumes existing graphics pipeline and buffer objects only. It does not add any dependency from `Aurelian.Graphics` to `Aurelian.Shaders`, DXC, SDSL-V compiler code, assets, world, null rendering, Dominatus, reference folders, Vortice, VMA/VMASharp, swapchains/windows/surfaces, descriptor systems, uniforms, push constants, index buffers, or reflection/service-locator construction.

@@ -28,11 +28,11 @@ public sealed class VulkanRenderPassCommandM0Tests
             WithRenderPassCommandResources(init.Plant!, (_, _, renderPass, framebuffer, commandBuffer) =>
             {
                 var encoder = new VulkanRenderPassCommandEncoder();
-                VulkanRenderPassCommandResult begin = encoder.Begin(
+                VulkanRenderPassBeginResult begin = encoder.Begin(
                     init.Plant!,
                     commandBuffer,
                     new VulkanRenderPassBeginRequest(renderPass, framebuffer, VulkanColorClearValue.TransparentBlack));
-                VulkanRenderPassCommandResult end = encoder.End(init.Plant!, commandBuffer);
+                VulkanRenderPassCommandResult end = encoder.End(init.Plant!, commandBuffer, begin.Scope!.Value);
 
                 Assert.True(begin.Success, FormatDiagnostics(begin));
                 Assert.True(end.Success, FormatDiagnostics(end));
@@ -46,7 +46,7 @@ public sealed class VulkanRenderPassCommandM0Tests
         {
             var encoder = new VulkanRenderPassCommandEncoder();
 
-            VulkanRenderPassCommandResult result = encoder.Begin(
+            VulkanRenderPassBeginResult result = encoder.Begin(
                 plant,
                 commandBuffer,
                 new VulkanRenderPassBeginRequest(renderPass, framebuffer, VulkanColorClearValue.OpaqueBlack));
@@ -85,7 +85,7 @@ public sealed class VulkanRenderPassCommandM0Tests
                     Assert.True(commandBegin.Success, FormatDiagnostics(commandBegin));
 
                     var encoder = new VulkanRenderPassCommandEncoder();
-                    VulkanRenderPassCommandResult result = encoder.Begin(
+                    VulkanRenderPassBeginResult result = encoder.Begin(
                         secondInit.Plant!,
                         commandBuffer,
                         new VulkanRenderPassBeginRequest(renderPass, framebuffer, VulkanColorClearValue.TransparentBlack));
@@ -108,7 +108,7 @@ public sealed class VulkanRenderPassCommandM0Tests
             renderPass.Dispose();
             var encoder = new VulkanRenderPassCommandEncoder();
 
-            VulkanRenderPassCommandResult result = encoder.Begin(
+            VulkanRenderPassBeginResult result = encoder.Begin(
                 plant,
                 commandBuffer,
                 new VulkanRenderPassBeginRequest(renderPass, framebuffer, VulkanColorClearValue.TransparentBlack));
@@ -125,7 +125,7 @@ public sealed class VulkanRenderPassCommandM0Tests
             framebuffer.Dispose();
             var encoder = new VulkanRenderPassCommandEncoder();
 
-            VulkanRenderPassCommandResult result = encoder.Begin(
+            VulkanRenderPassBeginResult result = encoder.Begin(
                 plant,
                 commandBuffer,
                 new VulkanRenderPassBeginRequest(renderPass, framebuffer, VulkanColorClearValue.TransparentBlack));
@@ -142,9 +142,9 @@ public sealed class VulkanRenderPassCommandM0Tests
             var encoder = new VulkanRenderPassCommandEncoder();
             var request = new VulkanRenderPassBeginRequest(renderPass, framebuffer, VulkanColorClearValue.TransparentBlack);
 
-            VulkanRenderPassCommandResult first = encoder.Begin(plant, commandBuffer, request);
-            VulkanRenderPassCommandResult second = encoder.Begin(plant, commandBuffer, request);
-            VulkanRenderPassCommandResult end = encoder.End(plant, commandBuffer);
+            VulkanRenderPassBeginResult first = encoder.Begin(plant, commandBuffer, request);
+            VulkanRenderPassBeginResult second = encoder.Begin(plant, commandBuffer, request);
+            VulkanRenderPassCommandResult end = encoder.End(plant, commandBuffer, first.Scope!.Value);
 
             Assert.True(first.Success, FormatDiagnostics(first));
             Assert.False(second.Success);
@@ -159,7 +159,7 @@ public sealed class VulkanRenderPassCommandM0Tests
         {
             var encoder = new VulkanRenderPassCommandEncoder();
 
-            VulkanRenderPassCommandResult result = encoder.End(plant, commandBuffer);
+            VulkanRenderPassCommandResult result = encoder.End(plant, commandBuffer, new VulkanRenderPassScope(plant.Context.Id, commandBuffer.LeaseId, 0));
 
             Assert.False(result.Success);
             Assert.Equal(VulkanRenderPassCommandStatus.Rejected, result.Status);
@@ -172,11 +172,11 @@ public sealed class VulkanRenderPassCommandM0Tests
         {
             var encoder = new VulkanRenderPassCommandEncoder();
 
-            VulkanRenderPassCommandResult begin = encoder.Begin(
+            VulkanRenderPassBeginResult begin = encoder.Begin(
                 plant,
                 commandBuffer,
                 new VulkanRenderPassBeginRequest(renderPass, framebuffer, new VulkanColorClearValue(0.1f, 0.2f, 0.3f, 1.0f)));
-            VulkanRenderPassCommandResult end = encoder.End(plant, commandBuffer);
+            VulkanRenderPassCommandResult end = encoder.End(plant, commandBuffer, begin.Scope!.Value);
 
             Assert.True(begin.Success, FormatDiagnostics(begin));
             Assert.True(end.Success, FormatDiagnostics(end));
@@ -297,6 +297,9 @@ public sealed class VulkanRenderPassCommandM0Tests
                     VulkanResourceLayout.Undefined,
                     VulkanResourceLayout.ColorAttachment),
             ]));
+
+    private static string FormatDiagnostics(VulkanRenderPassBeginResult result)
+        => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 
     private static string FormatDiagnostics(VulkanRenderPassCommandResult result)
         => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
