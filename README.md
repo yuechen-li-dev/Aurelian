@@ -110,3 +110,5 @@ A35 adds the first whole Texture2D upload path in `Aurelian.Graphics`: CPU RGBA 
 
 
 A36 adds explicit Vulkan render pass descriptor M0 in `Aurelian.Graphics`: render pass attachments are Aurelian-owned plain data with format, load/store ops, and initial/final layouts; the factory compiles the one-color-attachment M0 descriptor to a native `VkRenderPass`; and `AurelianVulkanRenderPass` owns idempotent destruction. Framebuffers, pipelines, draw commands, render-pass begin/end commands, swapchains/windows/surfaces, MSAA, and depth/stencil remain deferred.
+
+A37 adds Vulkan framebuffer M0 in `Aurelian.Graphics`: an explicit `VulkanFramebufferDescriptor` binds exactly one `AurelianVulkanTexture` color attachment to an existing `AurelianVulkanRenderPass`, validates plant/size/usage/image-view/render-pass format compatibility before native calls, and `AurelianVulkanFramebuffer` owns idempotent `VkFramebuffer` disposal. There is no framebuffer cache yet, no command-buffer render pass begin/end, no pipeline/draw path, and no swapchain/window/surface, depth/stencil, MSAA, descriptor-set, VMA/VMASharp, or Vortice work.

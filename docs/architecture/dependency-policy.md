@@ -213,3 +213,9 @@ The upload helper does not allocate/free/map/unmap raw memory directly and does 
 A36 keeps render pass ownership inside `Aurelian.Graphics` and behind Aurelian-owned records/results. The public descriptor is plain data and does not expose Silk.NET structs; Silk.NET Vulkan is used only at the native compilation/disposal edge that creates and destroys `VkRenderPass`. This preserves the policy that external/native libraries are plumbing dependencies, not architecture-defining contracts.
 
 The M0 render pass path does not add VMA/VMASharp, Vortice, global service locators, reflection, framebuffer/pipeline/draw abstractions, or swapchain/window/surface dependencies. Future pipeline compatibility keys can derive from the descriptor data/hash rather than from hidden backend state.
+
+## A37 framebuffer dependency note
+
+A37 keeps framebuffer creation behind Aurelian-owned descriptor/result/owner contracts in `Aurelian.Graphics.Vulkan.Pipelines.Framebuffers`. Silk.NET Vulkan remains plumbing at the native edge for `VkFramebuffer` creation/destruction only; raw Vulkan handles are not public API, and compatibility is expressed in Aurelian terms (`PlantId`, texture usage/format/size, render pass descriptor data).
+
+The M0 path supports one color attachment and no framebuffer cache. It does not add VMA/VMASharp, Vortice, global services, reflection, descriptor sets, render pass begin/end command recording, pipeline creation, draw calls, swapchain/window/surface dependencies, or cross-module references to world/assets/shaders/null rendering/vendor/reference code.
