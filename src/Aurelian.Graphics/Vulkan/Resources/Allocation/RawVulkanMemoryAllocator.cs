@@ -16,6 +16,8 @@ public sealed unsafe class RawVulkanMemoryAllocator : IVulkanMemoryAllocator
     private ulong requestedBytes;
     private ulong liveBytes;
     private ulong highWaterLiveBytes;
+    private ulong mappedAllocationCount;
+    private ulong mappedLiveBytes;
     private bool disposed;
 
     public RawVulkanMemoryAllocator(AurelianVulkanPlant plant)
@@ -89,6 +91,17 @@ public sealed unsafe class RawVulkanMemoryAllocator : IVulkanMemoryAllocator
                 return new VulkanAllocationResult(VulkanMemoryAllocatorStatus.Rejected, null, diagnostics);
             }
 
+            if (request.MapOnCreate && !SupportsMapping(request.Usage))
+            {
+                diagnostics.Add(Diagnostic(
+                    VulkanMemoryAllocatorDiagnosticCodes.MappingNotSupportedForUsage,
+                    VulkanMemoryAllocatorDiagnosticSeverity.Error,
+                    "Mapped allocations are supported only for CpuToGpu and GpuToCpu memory usage.",
+                    request.PlantId,
+                    request.DebugName));
+                return new VulkanAllocationResult(VulkanMemoryAllocatorStatus.Rejected, null, diagnostics);
+            }
+
             if (!TryFindMemoryTypeIndex(request.MemoryTypeBits, request.Usage, out uint memoryTypeIndex))
             {
                 diagnostics.Add(Diagnostic(
@@ -107,9 +120,7 @@ public sealed unsafe class RawVulkanMemoryAllocator : IVulkanMemoryAllocator
                 MemoryTypeIndex = memoryTypeIndex,
             };
 
-            Result result;
-            DeviceMemory memory;
-            result = vk.AllocateMemory(device, &allocateInfo, (AllocationCallbacks*)null, out memory);
+            Result result = vk.AllocateMemory(device, &allocateInfo, (AllocationCallbacks*)null, out DeviceMemory memory);
 
             if (result != Result.Success)
             {
@@ -122,11 +133,33 @@ public sealed unsafe class RawVulkanMemoryAllocator : IVulkanMemoryAllocator
                 return new VulkanAllocationResult(VulkanMemoryAllocatorStatus.Failed, null, diagnostics);
             }
 
+            void* mappedPointer = null;
+            if (request.MapOnCreate)
+            {
+                Result mapResult = vk.MapMemory(device, memory, 0, request.SizeBytes, 0, &mappedPointer);
+                if (mapResult != Result.Success)
+                {
+                    vk.FreeMemory(device, memory, (AllocationCallbacks*)null);
+                    diagnostics.Add(Diagnostic(
+                        VulkanMemoryAllocatorDiagnosticCodes.MapMemoryFailed,
+                        VulkanMemoryAllocatorDiagnosticSeverity.Error,
+                        $"vkMapMemory failed with result {mapResult}.",
+                        request.PlantId,
+                        request.DebugName));
+                    return new VulkanAllocationResult(VulkanMemoryAllocatorStatus.Failed, null, diagnostics);
+                }
+            }
+
             allocationCount++;
             liveAllocationCount++;
             requestedBytes += request.SizeBytes;
             liveBytes += request.SizeBytes;
             highWaterLiveBytes = Math.Max(highWaterLiveBytes, liveBytes);
+            if (mappedPointer is not null)
+            {
+                mappedAllocationCount++;
+                mappedLiveBytes += request.SizeBytes;
+            }
 
             VulkanMemoryAllocation allocation = new(
                 PlantId,
@@ -135,6 +168,7 @@ public sealed unsafe class RawVulkanMemoryAllocator : IVulkanMemoryAllocator
                 0,
                 request.SizeBytes,
                 request.Usage,
+                mappedPointer,
                 FreeAllocation);
 
             return new VulkanAllocationResult(VulkanMemoryAllocatorStatus.Allocated, allocation, diagnostics);
@@ -181,6 +215,13 @@ public sealed unsafe class RawVulkanMemoryAllocator : IVulkanMemoryAllocator
                 return;
             }
 
+            if (allocation.IsMapped)
+            {
+                vk.UnmapMemory(device, allocation.Memory);
+                mappedLiveBytes = allocation.SizeBytes > mappedLiveBytes ? 0 : mappedLiveBytes - allocation.SizeBytes;
+                allocation.MarkUnmapped();
+            }
+
             if (allocation.Memory.Handle != 0)
             {
                 vk.FreeMemory(device, allocation.Memory, (AllocationCallbacks*)null);
@@ -205,7 +246,12 @@ public sealed unsafe class RawVulkanMemoryAllocator : IVulkanMemoryAllocator
             liveAllocationCount,
             requestedBytes,
             liveBytes,
-            highWaterLiveBytes);
+            highWaterLiveBytes,
+            mappedAllocationCount,
+            mappedLiveBytes);
+
+    private static bool SupportsMapping(VulkanMemoryUsage usage)
+        => usage is VulkanMemoryUsage.CpuToGpu or VulkanMemoryUsage.GpuToCpu;
 
     private static MemoryPropertyFlags RequiredFlags(VulkanMemoryUsage usage)
         => usage switch

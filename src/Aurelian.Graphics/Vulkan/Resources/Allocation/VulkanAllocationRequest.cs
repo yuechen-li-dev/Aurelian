@@ -7,4 +7,5 @@ public sealed record VulkanAllocationRequest(
     ulong SizeBytes,
     uint MemoryTypeBits,
     VulkanMemoryUsage Usage,
-    string DebugName);
+    string DebugName,
+    bool MapOnCreate = false);

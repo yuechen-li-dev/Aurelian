@@ -10,4 +10,6 @@ public sealed record VulkanMemoryAllocatorTelemetry(
     ulong LiveAllocationCount,
     ulong RequestedBytes,
     ulong LiveBytes,
-    ulong HighWaterLiveBytes);
+    ulong HighWaterLiveBytes,
+    ulong MappedAllocationCount,
+    ulong MappedLiveBytes);

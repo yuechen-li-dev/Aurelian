@@ -68,7 +68,8 @@ public static unsafe class VulkanBufferFactory
                 requirements.Size,
                 requirements.MemoryTypeBits,
                 plan.MemoryUsage,
-                plan.DebugName));
+                plan.DebugName,
+                plan.MapOnCreate));
 
             if (!allocationResult.Success)
             {

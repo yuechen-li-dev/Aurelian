@@ -8,4 +8,5 @@ public sealed record VulkanBufferCreatePlan(
     ulong SizeBytes,
     VulkanBufferUsage Usage,
     VulkanMemoryUsage MemoryUsage,
-    string DebugName);
+    string DebugName,
+    bool MapOnCreate = false);

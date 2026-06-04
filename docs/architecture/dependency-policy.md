@@ -162,9 +162,15 @@ Examples:
 - World typed data stores should stay library-free for now.
 - Render snapshot and command-plan contracts are DTO-only in `Aurelian.Rendering.Contracts`.
 - The null renderer is implemented in `Aurelian.Rendering.Null` as a headless backend over command plans. World-to-render extraction now exists in `Aurelian.Runtime.Rendering`, so `WorldDataDocument -> RenderSnapshot -> RenderCommandPlan -> NullRenderer` is testable headlessly.
-- `Aurelian.Graphics` now owns the first graphics HAL scaffold, native-free plant registry, Vulkan instance/device initialization M0 for plant 0, optional per-plant timeline fence bundles, a pure managed fence-tagged resource pool, a per-plant Vulkan command pool / primary command buffer lease M0, Vulkan allocator contracts with an isolated raw backend, and Vulkan Buffer resource M0 over `IVulkanMemoryAllocator`. `PlantId.Zero` represents the single-GPU plant in M0; successful Vulkan creation is per-plant, requires timeline semaphores, records plain facts/diagnostics, and keeps window/surface/swapchain/buffer/texture/rendering work deferred. The next implementation step should add allocator contracts before buffer resources; VMA remains backend plumbing, not architecture.
+- `Aurelian.Graphics` now owns the first graphics HAL scaffold, native-free plant registry, Vulkan instance/device initialization M0 for plant 0, optional per-plant timeline fence bundles, a pure managed fence-tagged resource pool, a per-plant Vulkan command pool / primary command buffer lease M0, Vulkan allocator contracts with an isolated raw backend, Vulkan Buffer resource M0 over `IVulkanMemoryAllocator`, and A30 mapped CPU writes for host-visible buffers. `PlantId.Zero` represents the single-GPU plant in M0; successful Vulkan creation is per-plant, requires timeline semaphores, records plain facts/diagnostics, and keeps window/surface/swapchain/texture/rendering work deferred. VMA remains backend plumbing, not architecture.
 - Visual render backends can later use Silk.NET first behind `Aurelian.Graphics`; Vortice remains deferred.
 - Physics can later use BEPU behind `Aurelian.Physics.*`.
 - Navigation can later use DotRecast behind `Aurelian.Navigation.*`.
 - Assets can keep Tomlyn because TOML syntax is not strategic architecture.
 - Shader DXC validation remains optional and external.
+
+## A30 graphics mapped-memory note
+
+A30 keeps CPU upload support inside existing dependency boundaries. The implementation uses Silk.NET Vulkan only at the backend edge and introduces no VMA/VMASharp, Vortice, global allocator, service locator, staging copy subsystem, textures, swapchain/window/surface, render pass, pipeline, or draw dependencies.
+
+Mapped memory is represented through Aurelian-owned allocation and buffer contracts. Only allocator backends may call `vkMapMemory`/`vkUnmapMemory`; buffer code receives writability facts and performs bounds-checked writes through `AurelianVulkanBuffer.Write(...)` rather than owning raw memory allocation or mapping policy.
