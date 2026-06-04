@@ -146,3 +146,9 @@ A45 adds the first validated Vulkan vertex draw command path in `Aurelian.Graphi
 A46 adds static valid SPIR-V triangle shader fixtures to `Aurelian.Graphics.Tests` and uses them to prove the existing Vulkan backend can record a complete offscreen draw command sequence without presentation. The test path creates a Vulkan plant/device, raw allocator, command buffer pool, fence bundle, offscreen color attachment texture, render pass, framebuffer, compiled graphics pipeline from neutral `CompiledShaderProgram` DTOs, device-local vertex buffer, staging upload, command buffer, render pass scope, vertex draw, render pass end, and command buffer end.
 
 The fixtures are checked-in byte arrays generated once from tiny vertex/fragment HLSL and validated as SPIR-V; the graphics tests consume bytes directly and do not add a runtime shader compiler dependency, an `Aurelian.Shaders` project reference, DXC, swapchain/window/surface, descriptors, uniforms, index buffers, texture sampling, VMA/VMASharp, or Vortice. Visual output and presentation remain deferred.
+
+## A47 Command submit helper M0
+
+A47 adds a narrow Vulkan command submit helper in `Aurelian.Graphics`: one executable `VulkanCommandBufferLease` can be submitted to the plant graphics queue, signal `VulkanFenceBundle.CommandListFence`, optionally wait for that timeline value, and retire through the existing `VulkanCommandBufferPool`. The A46 offscreen triangle proof now records, ends, submits, waits, and verifies the command-list fence completion when Vulkan is available.
+
+A47 remains backend plumbing only. It adds no swapchain/window/surface, no present/acquire path, no render backend facade, no descriptors/uniforms/index buffers, no shader compiler dependency in graphics, no VMA/VMASharp, and no Vortice.

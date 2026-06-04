@@ -236,3 +236,21 @@ A46 proves the first complete offscreen Vulkan draw recording chain in `Aurelian
 The milestone also introduces static valid SPIR-V byte fixtures under the graphics tests. Those fixtures are generated once from tiny HLSL triangle shaders and consumed through neutral `Aurelian.Rendering.Contracts.Shaders` compiled shader DTOs, so `Aurelian.Graphics` and `Aurelian.Graphics.Tests` remain free of a runtime shader compiler dependency and do not reference `Aurelian.Shaders`.
 
 Recommended next milestone: A47 — Command submit helper M0, because A46 proves offscreen draw recording but intentionally leaves draw command buffer submission/wait behind a dedicated backend seam.
+
+## A47 — Vulkan command submit helper M0
+
+Status: implemented.
+
+A47 completes the first submit seam after the A46 offscreen recording proof. `Aurelian.Graphics.Vulkan.Commanding.Submit` now owns the one-command-buffer M0 request/result/diagnostic model and submits an executable `VulkanCommandBufferLease` to the plant queue, signals `VulkanFenceBundle.CommandListFence`, optionally waits for the signaled value, retires the lease through `VulkanCommandBufferPool`, and returns typed diagnostics and the signal fence value.
+
+The offscreen draw proof now follows:
+
+```text
+record offscreen draw
+  -> end command buffer
+  -> submit one command buffer
+  -> signal/wait command-list timeline fence
+  -> retire command buffer
+```
+
+No swapchain/window/surface, present/acquire path, render backend abstraction, render graph, descriptor sets, uniforms, index buffers, runtime shader compilation, VMA/VMASharp, or Vortice are introduced. The recommended next milestone is `A48 — Surface/swapchain M0` because offscreen commands can now be recorded and submitted, leaving presentation as the next missing visual path.

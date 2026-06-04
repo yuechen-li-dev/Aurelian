@@ -100,6 +100,17 @@ public sealed class VulkanCommandBufferLease
         }
     }
 
+    public bool IsDisposed
+    {
+        get
+        {
+            lock (gate)
+            {
+                return lifecycle == VulkanCommandBufferLifecycle.Disposed;
+            }
+        }
+    }
+
     public VulkanCommandBufferOperationResult Reset()
     {
         lock (gate)

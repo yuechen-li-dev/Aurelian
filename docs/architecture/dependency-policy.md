@@ -296,3 +296,9 @@ The draw encoder consumes existing graphics pipeline and buffer objects only. It
 A46 allows tiny static SPIR-V byte fixtures in `tests/Aurelian.Graphics.Tests` for backend recording proofs. These fixtures are test data, not a production shader compiler integration: they are checked in as source arrays, include generation/validation notes, and are consumed through `Aurelian.Rendering.Contracts.Shaders` DTOs.
 
 This does not relax the graphics dependency boundary. `Aurelian.Graphics` must not reference `Aurelian.Shaders`, DXC packages, SDSL-V/HLSL compiler internals, Vortice, VMA/VMASharp, assets, world, Dominatus, vendor code, windows, surfaces, or swapchains as part of the A46 offscreen recording proof. Presentation and visual output remain separate future milestones.
+
+## A47 command submit dependency note
+
+A47 keeps queue submission inside the existing `Aurelian.Graphics` Vulkan backend boundary. The new submitter exposes Aurelian-owned request/result/status/diagnostic types and uses Silk.NET Vulkan only at the native queue-submit edge for one executable command buffer and one timeline semaphore signal.
+
+Command submission remains per plant and uses the existing `VulkanFenceBundle.CommandListFence` and `VulkanCommandBufferPool` rather than a global scheduler, service locator, renderer facade, or resource cleanup system. A47 does not add swapchains/windows/surfaces, present/acquire, descriptor systems, uniforms, index buffers, shader compiler references, VMA/VMASharp, Vortice, or vendor/reference-code dependencies.

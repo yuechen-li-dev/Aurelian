@@ -4,6 +4,7 @@ using Aurelian.Graphics.Tests.Fixtures.Spirv;
 using Aurelian.Graphics.Vulkan.Commanding;
 using Aurelian.Graphics.Vulkan.Commanding.Draw;
 using Aurelian.Graphics.Vulkan.Commanding.RenderPasses;
+using Aurelian.Graphics.Vulkan.Commanding.Submit;
 using Aurelian.Graphics.Vulkan.Device;
 using Aurelian.Graphics.Vulkan.Diagnostics;
 using Aurelian.Graphics.Vulkan.Pipelines.Framebuffers;
@@ -55,7 +56,7 @@ public sealed class VulkanOffscreenDrawRecordingM0Tests
     }
 
     [Fact]
-    public void VulkanOffscreenDrawRecording_RecordTriangleCommands_WhenVulkanAvailable_SucceedsOrCleanlySkips()
+    public void VulkanOffscreenDrawRecording_RecordAndSubmitTriangleCommands_WhenVulkanAvailable_SucceedsOrCleanlySkips()
     {
         VulkanInitResult init = VulkanPlantInitializer.CreatePlant(PlantId.Zero, new VulkanPlantOptions(EnableValidation: false));
         using (init.Plant)
@@ -71,6 +72,7 @@ public sealed class VulkanOffscreenDrawRecordingM0Tests
             using var fences = VulkanFenceBundle.Create(plant);
             using var commandPool = VulkanCommandBufferPool.Create(plant);
             using var uploader = new VulkanBufferUploader(plant, allocator, commandPool, fences);
+            using var submitter = new VulkanCommandSubmitter(plant, commandPool, fences);
 
             using AurelianVulkanTexture colorAttachment = CreateColorAttachment(plant, allocator);
             using AurelianVulkanRenderPass renderPass = CreateRenderPass(plant);
@@ -84,7 +86,7 @@ public sealed class VulkanOffscreenDrawRecordingM0Tests
                 DebugName: "a46.triangle-vertices"));
             Assert.True(upload.Success, FormatDiagnostics(upload));
 
-            VulkanFenceOperationResult uploadWait = fences.CopyFence.WaitForValue(upload.SignalFenceValue!.Value, FenceWaitTimeoutNanoseconds);
+            VulkanFenceOperationResult uploadWait = fences.CommandListFence.WaitForValue(upload.SignalFenceValue!.Value, FenceWaitTimeoutNanoseconds);
             Assert.True(uploadWait.Success, FormatDiagnostics(uploadWait));
 
             VulkanCommandBufferLease commandBuffer = commandPool.Rent(fences.CommandListFence.LastKnownCompletedValue);
@@ -117,6 +119,18 @@ public sealed class VulkanOffscreenDrawRecordingM0Tests
             VulkanCommandBufferOperationResult endCommandBuffer = commandBuffer.End();
             Assert.True(endCommandBuffer.Success, FormatDiagnostics(endCommandBuffer));
             Assert.True(commandBuffer.IsExecutable);
+
+            VulkanCommandSubmitResult submit = submitter.Submit(new VulkanCommandSubmitRequest(
+                commandBuffer,
+                WaitForCompletion: true,
+                TimeoutNanoseconds: FenceWaitTimeoutNanoseconds,
+                DebugName: "a47.offscreen-triangle-submit"));
+            Assert.True(submit.Success, FormatDiagnostics(submit));
+            Assert.NotNull(submit.SignalFenceValue);
+
+            VulkanFenceOperationResult completed = fences.CommandListFence.QueryCompletedValue();
+            Assert.True(completed.Success, FormatDiagnostics(completed));
+            Assert.True(completed.Value >= submit.SignalFenceValue.Value);
         }
     }
 
@@ -254,6 +268,9 @@ public sealed class VulkanOffscreenDrawRecordingM0Tests
         => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 
     private static string FormatDiagnostics(VulkanFenceOperationResult result)
+        => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
+
+    private static string FormatDiagnostics(VulkanCommandSubmitResult result)
         => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 
     private static string FormatDiagnostics(VulkanTextureCreateResult result)
