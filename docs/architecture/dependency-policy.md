@@ -187,3 +187,9 @@ The M0 upload path is intentionally synchronous: it waits for the submitted time
 A32 keeps barrier state as an Aurelian-owned model even though the mapper exposes Silk.NET Vulkan facts at the backend boundary. Resource layouts, access masks, stages, transition plans, batches, diagnostics, and subresource tracking are defined in `Aurelian.Graphics`; callers do not depend on Stride, Vortice, VMA/VMASharp, or vendor/reference code.
 
 The mapper is intentionally deterministic and test-covered, while command emission is deferred so the pure state model can be validated without requiring a Vulkan runtime. Cross-plant transfer layouts are represented as explicit stubs with diagnostics instead of hiding future queue-family ownership transfer policy in globals or hardcoded queue-family indices.
+
+## A33 texture allocation boundary
+
+A33 keeps Vulkan texture memory behind the same Aurelian-owned allocator boundary as buffers. Texture code may create and destroy images and image views, query image memory requirements, and bind returned allocations, but it must not call raw memory allocation/free APIs. `vkAllocateMemory`, `vkFreeMemory`, `vkMapMemory`, and `vkUnmapMemory` remain allocator-backend details only.
+
+Texture creation continues the reference-only policy for Stride and other engines: their image/view/lifetime intent may inform audits, but production code owns its create plans, diagnostics, layout tracker integration, and allocator calls directly. No VMA/VMASharp, Vortice, swapchain/window, render-pass, descriptor, sampler, or upload dependency is introduced by this milestone.

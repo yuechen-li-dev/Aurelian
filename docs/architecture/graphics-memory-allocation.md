@@ -236,3 +236,16 @@ This intentionally avoids unsafe staging lifetime: temporary staging memory is n
 A32 adds the resource-state transition vocabulary that sits beside, not inside, the allocation boundary. `Aurelian.Graphics.Vulkan.Resources.Barriers` defines Aurelian resource layouts, access flags, stage flags, Vulkan mapping facts, pure image barrier plans/batches, a per-subresource layout tracker, and buffer access transition plans. This keeps memory ownership (`VulkanMemoryAllocation` and `GpuResourceState`) separate from synchronization/layout planning while giving future buffer, texture, upload, and draw paths a common state vocabulary.
 
 The layout tracker is per mip and array layer from the start, avoiding the shared mutable `NativeLayout`/ignored-subresource pitfalls identified in the Stride reference audit. `TransitionAll` emits only subresources that actually change. Cross-plant transfer layouts are present as explicit stubs and map as transfer source/destination for M0 while queue-family ownership transfer planning remains deferred. No command emission, textures, render passes, pipelines, descriptors, swapchains/windows/surfaces, VMA/VMASharp, or Vortice work is introduced by A32.
+
+## 15. A33 Texture2D resource note
+
+A33 adds `Aurelian.Graphics.Vulkan.Resources.Textures` as the second resource consumer of `IVulkanMemoryAllocator`. Texture creation validates a `VulkanTextureCreatePlan`, maps Aurelian-owned texture formats/usages to Silk.NET Vulkan facts, creates a 2D optimal-tiled `VkImage`, queries `VkMemoryRequirements`, allocates through `IVulkanMemoryAllocator`, binds with `vkBindImageMemory`, and optionally creates a default color `VkImageView` when the usage includes shader-resource or color-attachment intent.
+
+The allocator boundary is unchanged and explicit:
+
+- texture code does not call `vkAllocateMemory` or `vkFreeMemory`;
+- raw allocation/free/map/unmap APIs remain isolated to allocator backends;
+- the resource owns the returned `VulkanMemoryAllocation` and disposes it after destroying the image view and image;
+- `GpuResourceState` carries `PlantId`, allocation byte size, and allocation backend for later bind-time and retirement checks.
+
+Each texture initializes a `VulkanLayoutTracker` for every mip level and array layer using the accepted initial layout. M0 accepts only `VulkanResourceLayout.Undefined`; non-undefined initial layouts are rejected because no barrier command emission exists yet to make shader-resource, transfer, or attachment layouts true. Texture upload, `vkCmdCopyBufferToImage`, image barrier command emission, samplers, descriptors, render passes, pipelines, swapchains/windows/surfaces, VMA/VMASharp, and Vortice remain deferred.
