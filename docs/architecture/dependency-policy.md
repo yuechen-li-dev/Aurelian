@@ -258,3 +258,9 @@ A41 deliberately remains a tooling/artifact milestone. It does not integrate SDS
 A42 keeps the SDSL-V -> HLSL -> SPIR-V artifact path entirely inside `Aurelian.Shaders`. DXC remains a tool/subprocess dependency used by shader artifact emission and tests, not a runtime graphics dependency. `Aurelian.Graphics` must continue to consume only SPIR-V bytes and metadata in later work; it must not reference SDSL-V parsers, HLSL emitters, `Microsoft.Direct3D.DXC`, or any `Vortice.Dxc` wrapper.
 
 The A42 stage extraction is intentionally convention-based M0 metadata: generated HLSL must contain `VSMain` and `PSMain`, and the smoke fixture uses emitter conventions for `POSITION`, `SV_Position`, `COLOR0`, and `SV_Target0`. Real semantic annotations/reflection are deferred.
+
+## A43 compiled shader contract bridge
+
+A43 establishes the neutral handoff for compiled shader data. `Aurelian.Rendering.Contracts` may define `Aurelian.Rendering.Contracts.Shaders` DTOs because they are plain contract records/enums and contain no compiler, Vulkan, Silk, DXC, graphics backend, asset, or runtime handles. `Aurelian.Shaders` may reference `Aurelian.Rendering.Contracts` to export SPIR-V shader artifacts into compiled shader contracts. `Aurelian.Graphics` may reference `Aurelian.Rendering.Contracts` to map compiled shader contracts into Vulkan pipeline stage descriptors.
+
+The forbidden edges remain forbidden: `Aurelian.Graphics` must not reference `Aurelian.Shaders`, `Aurelian.Shaders` must not reference `Aurelian.Graphics`, and graphics must not depend on DXC, SDSL-V parsers, HLSL emitters, or runtime shader compilation. The compiled shader contract bridge is an artifact-consumption seam, not an asset pipeline or shader compiler integration inside the graphics backend.

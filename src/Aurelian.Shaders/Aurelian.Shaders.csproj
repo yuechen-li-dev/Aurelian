@@ -9,4 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Direct3D.DXC" GeneratePathProperty="true" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Aurelian.Rendering.Contracts/Aurelian.Rendering.Contracts.csproj" />
+  </ItemGroup>
 </Project>
