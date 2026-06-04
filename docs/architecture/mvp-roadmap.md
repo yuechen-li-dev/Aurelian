@@ -226,3 +226,13 @@ Status: implemented.
 A45 records the first explicit draw-command shape in `Aurelian.Graphics`: render pass begin returns a typed `VulkanRenderPassScope`, the command buffer lease owns minimal active render-pass state, render pass end validates and clears the supplied scope, and `VulkanDrawCommandEncoder.DrawVertices(...)` validates and records viewport/scissor, graphics pipeline bind, one vertex buffer bind at binding 0/offset 0, and a non-indexed `vkCmdDraw` with instance count 1 and first instance 0.
 
 The milestone remains intentionally pre-presentation and pre-material: there is no swapchain/window/surface, no render-target presentation, no descriptor sets, no uniform buffers, no push constants, no index buffers, no multiple vertex buffers, no pipeline cache, and no `RenderCommandPlan` execution yet. The recommended follow-up is A46 — Valid SPIR-V fixture / first offscreen draw recording proof, so the native success path can be proven without coupling graphics tests to shader compiler projects.
+
+## A46 — Valid SPIR-V fixture / first offscreen draw recording proof
+
+Status: implemented.
+
+A46 proves the first complete offscreen Vulkan draw recording chain in `Aurelian.Graphics.Tests`: plant/device creation, allocator, command buffer pool, fence bundle, color attachment texture, render pass, framebuffer, graphics pipeline, vertex buffer, vertex upload, command buffer begin, render pass begin, non-indexed vertex draw, render pass end, and command buffer end. The proof intentionally stops at command recording; it does not add presentation, swapchains, windows, surfaces, descriptors, uniforms, index buffers, texture sampling, or visual readback.
+
+The milestone also introduces static valid SPIR-V byte fixtures under the graphics tests. Those fixtures are generated once from tiny HLSL triangle shaders and consumed through neutral `Aurelian.Rendering.Contracts.Shaders` compiled shader DTOs, so `Aurelian.Graphics` and `Aurelian.Graphics.Tests` remain free of a runtime shader compiler dependency and do not reference `Aurelian.Shaders`.
+
+Recommended next milestone: A47 — Command submit helper M0, because A46 proves offscreen draw recording but intentionally leaves draw command buffer submission/wait behind a dedicated backend seam.

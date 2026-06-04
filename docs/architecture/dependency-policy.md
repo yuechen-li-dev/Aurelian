@@ -290,3 +290,9 @@ A44 does not authorize asset/TOML integration, draw/bind commands, descriptor se
 A45 keeps draw recording inside the existing `Aurelian.Graphics` Vulkan backend boundary. Render pass scope tokens, draw requests, diagnostics, and results are Aurelian-owned contracts; Silk.NET Vulkan appears only at the native command emission edge for `vkCmdSetViewport`, `vkCmdSetScissor`, `vkCmdBindPipeline`, `vkCmdBindVertexBuffers`, and `vkCmdDraw`.
 
 The draw encoder consumes existing graphics pipeline and buffer objects only. It does not add any dependency from `Aurelian.Graphics` to `Aurelian.Shaders`, DXC, SDSL-V compiler code, assets, world, null rendering, Dominatus, reference folders, Vortice, VMA/VMASharp, swapchains/windows/surfaces, descriptor systems, uniforms, push constants, index buffers, or reflection/service-locator construction.
+
+## A46 graphics SPIR-V fixture policy
+
+A46 allows tiny static SPIR-V byte fixtures in `tests/Aurelian.Graphics.Tests` for backend recording proofs. These fixtures are test data, not a production shader compiler integration: they are checked in as source arrays, include generation/validation notes, and are consumed through `Aurelian.Rendering.Contracts.Shaders` DTOs.
+
+This does not relax the graphics dependency boundary. `Aurelian.Graphics` must not reference `Aurelian.Shaders`, DXC packages, SDSL-V/HLSL compiler internals, Vortice, VMA/VMASharp, assets, world, Dominatus, vendor code, windows, surfaces, or swapchains as part of the A46 offscreen recording proof. Presentation and visual output remain separate future milestones.
