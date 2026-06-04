@@ -130,6 +130,19 @@ If the compiler cannot see the dependency, Aurelian should distrust it.
 - Tools/editor packages may depend on UI/windowing libraries.
 - No dependency should create reverse references into core layers.
 
+
+## A40 DXC subprocess toolchain policy
+
+A40 establishes `Microsoft.Direct3D.DXC` as a shader compiler tooling dependency only. The package reference belongs in `Aurelian.Shaders`, where SDSL-V parsing, validation, HLSL emission, artifact contracts, and external compiler checks already live. `Aurelian.Graphics`, `Aurelian.Runtime`, `Aurelian.World`, `Aurelian.Rendering.Contracts`, and `Aurelian.Rendering.Null` must remain DXC-free.
+
+The intended shader toolchain remains:
+
+```text
+SDSL-V -> HLSL/Slang -> DXC subprocess -> SPIR-V artifact -> Vulkan pipeline creation
+```
+
+Aurelian does not plan direct SDSL-V -> SPIR-V generation. Runtime graphics consumes SPIR-V bytes plus stage, entry-point, hash, and future reflection/binding metadata; it must not invoke DXC or reference DXC packages. `Vortice.Dxc` remains deferred as a future fallback only if subprocess DXC is insufficient.
+
 ## 8. Wrapper rule
 
 For every external library, Aurelian should ask:
