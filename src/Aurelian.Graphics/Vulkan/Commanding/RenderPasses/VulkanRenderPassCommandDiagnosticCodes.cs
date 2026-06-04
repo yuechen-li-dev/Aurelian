@@ -13,4 +13,5 @@ public static class VulkanRenderPassCommandDiagnosticCodes
     public const string EndRenderPassFailed = "AGRP1009";
     public const string RenderPassAlreadyActive = "AGRP1010";
     public const string NoActiveRenderPass = "AGRP1011";
+    public const string InvalidRenderPassScope = "AGRP1012";
 }
