@@ -174,3 +174,11 @@ Do not carry these patterns into Aurelian:
 - no buffer/texture code that owns allocator policy directly;
 - no Dominatus policy coupled to backend-specific allocation handles;
 - no allocator telemetry that requires polling opaque backend internals from unrelated systems.
+
+## 10. A28 implementation note
+
+A28 implements the first version of the allocator boundary described above. `Aurelian.Graphics.Vulkan.Resources.Allocation` now contains Aurelian-owned allocation requests/results, allocation handles, `GpuResourceState`, status/diagnostic contracts, allocator telemetry, `IVulkanMemoryAllocator`, and a narrow `RawVulkanMemoryAllocator` backend.
+
+The raw backend is intentionally M0 fallback plumbing. It allocates one `VkDeviceMemory` object per successful request only so the next resource milestone can prove buffer ownership against a real allocator contract. Future buffer and texture code must depend on `IVulkanMemoryAllocator`; it must not call `vkAllocateMemory`/`vkFreeMemory` directly and must not expose backend-specific VMA or raw Vulkan allocation details.
+
+VMA/VMASharp remains deferred. A future VMA backend may replace or supplement the raw backend behind the same contracts after package/API and NativeAOT behavior are verified.
