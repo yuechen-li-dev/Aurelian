@@ -340,3 +340,9 @@ The new plant-output wrappers are non-owning views over existing `AurelianVulkan
 A54 keeps the first visible triangle proof inside `Aurelian.Graphics` tests and existing Vulkan mechanism seams. The integration path uses checked-in SPIR-V fixture bytes from graphics tests, existing offscreen draw helpers, the A53 passthrough compositor, and the A49 swapchain acquire/present wrapper; it does not add a graphics reference to `Aurelian.Shaders`, DXC, `Aurelian.Runtime`, Dominatus, `Aurelian.World`, Vortice, VMA/VMASharp, CodeReferences, vendor changes, service locators, singletons, or reflection.
 
 The proof is intentionally not a renderer facade and not a frame loop. Runtime/Dominatus policy, differential composition, present-loop/frame-pump ownership, descriptor/uniform/index-buffer work, multi-GPU transfer, asset/TOML integration, and shader compiler integration remain deferred behind the existing contracts and graphics mechanism boundaries.
+
+## A55 compositor policy dependency note
+
+The A55 runtime compositor policy keeps the dependency direction explicit: `Aurelian.Runtime` may reference Dominatus and `Aurelian.Rendering.Contracts` to decide and emit compositor acts, while the neutral contracts do not reference Dominatus and `Aurelian.Graphics` does not reference runtime policy. `CompositorDispatchAct` is runtime-local and wraps a neutral request; tests complete it with a fake actuator rather than a graphics or Vulkan bridge.
+
+The bridge from runtime acts to graphics compositor mechanism is intentionally deferred to A56, so A55 adds no new package dependency, no graphics reference in runtime, no Vulkan handles in policy state, no service locator, and no global compositor singleton.

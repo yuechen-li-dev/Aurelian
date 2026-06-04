@@ -258,3 +258,9 @@ A52 implements graphics-side swapchain image wrappers under `Aurelian.Graphics.V
 The Vulkan compositor mechanism now accepts a neutral `CompositorDispatchRequest` with `CompositorPolicyKind.Passthrough`, requires exactly one input, resolves that input through `VulkanPlantOutputResolver`, resolves the swapchain target through `VulkanPresentationTargetResolver`, validates same-plant/same-size/same-format M0 constraints, and records a deterministic `vkCmdCopyImage` path with explicit source and target layout transitions.
 
 This keeps the design split intact: `Aurelian.Graphics` owns backend wrappers, image barriers, command recording, copy, and submit/wait; runtime/Dominatus policy still belongs under `Aurelian.Runtime/Compositor`; differential and multi-GPU behavior remain future work.
+
+## 13. A55 runtime policy implementation status
+
+A55 implements the first Dominatus-backed runtime policy session under `Aurelian.Runtime.Compositor`. The policy consumes only neutral compositor facts and refs, supports passthrough M0 readiness checks, and emits a runtime-only `CompositorDispatchAct` containing the neutral `CompositorDispatchRequest` for a compositor actuator to execute.
+
+The A55 tests use a fake Dominatus actuator, not Vulkan, to prove the actuation shape: ready and reused outputs dispatch, pending outputs wait, unsupported non-passthrough policy requests reject, and failed neutral dispatch results propagate as runtime policy failures. The graphics mechanism bridge remains deferred, so `Aurelian.Graphics` still owns compositor mechanism execution and does not reference Dominatus/runtime policy.
