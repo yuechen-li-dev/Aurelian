@@ -271,3 +271,9 @@ Supported in M0: whole Texture2D mip 0, array layer 0, four bytes per pixel (`Rg
 A36 adds native `VkRenderPass` creation/disposal but does not allocate GPU memory. Render pass descriptors are explicit plain data and the native owner destroys only the render pass handle; it does not create framebuffers, images, image views, pipelines, command buffers, swapchains/windows/surfaces, or allocator-backed resources.
 
 This means the A28-A35 allocation boundary remains unchanged: texture and buffer resources continue to own allocator-backed memory, raw Vulkan memory calls remain isolated to allocator backends, and render pass compatibility/state is represented separately from memory ownership. M0 supports one color attachment descriptor and defers depth/stencil, MSAA, multiple color attachments, framebuffer objects, and render commands.
+
+## 19. A37 framebuffer M0 allocation note
+
+A37 adds native framebuffer creation but does not allocate GPU memory. Framebuffers reference an existing render pass and existing `AurelianVulkanTexture` color attachment image view; texture memory ownership remains with the Texture2D resource and `IVulkanMemoryAllocator` boundary from A28-A33. The framebuffer owner destroys only `VkFramebuffer` and never destroys the render pass, texture, image view, image, or allocation.
+
+The M0 compatibility checks ensure the framebuffer descriptor dimensions match the texture, the texture includes `ColorAttachment` usage and has a native image view, all resources belong to the same plant, and the render pass's one color attachment format matches the texture format. There is no framebuffer cache yet and no render pass begin/end command, pipeline, draw, swapchain/window/surface, depth/stencil, MSAA, MRT, descriptor-set, VMA/VMASharp, or Vortice work.
