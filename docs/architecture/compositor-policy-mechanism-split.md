@@ -213,8 +213,8 @@ A52 — Swapchain image wrappers M0
   No copy/blit compositor yet.
 
 A53 — Vulkan compositor passthrough copy M0
-  Execute a CompositorDispatchRequest by copying/blitting one ready plant output into the acquired presentation target.
-  Use barriers, command recording, submit, and render-finished semaphore handoff explicitly.
+  Implemented mechanism-only passthrough copy in Aurelian.Graphics: resolve one plant output, resolve one acquired presentation target, emit explicit barriers, record vkCmdCopyImage, submit/wait, and return neutral dispatch results plus Vulkan diagnostics.
+  Present semaphore handoff remains deferred.
 
 A54 — Runtime Dominatus compositor policy M0
   Add the first runtime policy session using Dominatus blackboard/HFSM/acts to decide dispatch-or-wait for passthrough/full-quality M0 facts.
@@ -223,7 +223,7 @@ A55 — First visible triangle through compositor path
   Connect offscreen draw output through compositor passthrough to presentation in a minimal frame loop proof.
 ```
 
-A51 implemented neutral contracts first. A52 then added graphics-side swapchain image wrappers after the policy/mechanism seam was explicit.
+A51 implemented neutral contracts first. A52 then added graphics-side swapchain image wrappers after the policy/mechanism seam was explicit. A53 then added the first graphics-side passthrough copy mechanism without adding runtime/Dominatus policy.
 
 ## 10. Anti-goals
 
@@ -251,3 +251,10 @@ A51 intentionally adds no Vulkan/Silk handles, no graphics mechanism, no Dominat
 A52 implements graphics-side swapchain image wrappers under `Aurelian.Graphics.Vulkan.Compositor`. The wrappers are backend mechanism targets, not neutral contracts and not ordinary allocated textures. `AurelianVulkanSwapchain.CreatePresentationTargetImageSet()` creates one non-owning wrapper per swapchain image, preserving image order and carrying plant ID, swapchain image index, format, extent, internal native image/image-view handles, and a per-image one-mip/one-layer layout tracker initialized to `Present`.
 
 `VulkanPresentationTargetResolver` maps neutral `PresentationTargetRef` values to backend wrappers and rejects missing image sets, plant mismatches, and out-of-range image indices with typed diagnostics. A52 still emits no barriers, copy/blit commands, render commands, queue submits, acquire calls, present calls, frame loop code, or Dominatus policy. The next recommended milestone is **A53 — Vulkan compositor passthrough copy M0**.
+
+
+## A53 implementation note
+
+The Vulkan compositor mechanism now accepts a neutral `CompositorDispatchRequest` with `CompositorPolicyKind.Passthrough`, requires exactly one input, resolves that input through `VulkanPlantOutputResolver`, resolves the swapchain target through `VulkanPresentationTargetResolver`, validates same-plant/same-size/same-format M0 constraints, and records a deterministic `vkCmdCopyImage` path with explicit source and target layout transitions.
+
+This keeps the design split intact: `Aurelian.Graphics` owns backend wrappers, image barriers, command recording, copy, and submit/wait; runtime/Dominatus policy still belongs under `Aurelian.Runtime/Compositor`; differential and multi-GPU behavior remain future work.

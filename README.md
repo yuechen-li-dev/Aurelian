@@ -183,3 +183,10 @@ This is contracts-only work: no Vulkan/Silk handles are exposed, no Dominatus/ru
 A52 adds graphics-side swapchain image wrappers under `Aurelian.Graphics.Vulkan.Compositor`. `AurelianVulkanSwapchain.CreatePresentationTargetImageSet()` creates one non-owning `VulkanPresentationTargetImage` per swapchain image, preserving swapchain image order and exposing plant ID, image index, format, extent, and per-image layout tracking while keeping native image/image-view handles internal.
 
 The wrappers do not own image memory, do not call allocator APIs, do not destroy swapchain images, do not destroy swapchain image views, and do not pretend presentation images are ordinary `AurelianVulkanTexture` allocations. The initial layout tracker convention is `Present` for mip 0/layer 0. Neutral `PresentationTargetRef` values now resolve to backend wrappers through typed graphics diagnostics; compositor passthrough copy/blit remains deferred to `A53 — Vulkan compositor passthrough copy M0`.
+
+
+## A53 Vulkan compositor passthrough copy M0 status
+
+A53 adds the first concrete Vulkan compositor mechanism in `Aurelian.Graphics.Vulkan.Compositor`. The mechanism consumes neutral `CompositorDispatchRequest` values, supports `CompositorPolicyKind.Passthrough`, resolves one backend plant output texture and one acquired swapchain presentation target, records explicit image barriers, uses `vkCmdCopyImage` for matching format/extent copies, submits and waits through `VulkanCommandSubmitter`, and returns a neutral `CompositorDispatchResult` wrapped in typed Vulkan mechanism diagnostics.
+
+The compositor source side is represented by non-owning `VulkanPlantOutputImage` wrappers over offscreen `AurelianVulkanTexture` instances with `TransferSource` usage. Presentation targets continue to use the A52 non-owning swapchain wrappers. Runtime/Dominatus policy, differential composition, multi-GPU external memory, compute composition, shader/compiler integration, frame-loop ownership, and present semaphore integration remain deferred.

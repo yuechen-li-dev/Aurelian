@@ -297,3 +297,10 @@ Status: implemented.
 A52 makes swapchain images addressable as backend compositor/presentation targets without transferring ownership away from the swapchain/window-system path. `Aurelian.Graphics.Vulkan.Compositor` now contains non-owning `VulkanPresentationTargetImage` wrappers, ordered `VulkanPresentationTargetImageSet` collections, and a `VulkanPresentationTargetResolver` that maps neutral `PresentationTargetRef` values to backend wrappers with typed diagnostics.
 
 Each wrapper records the plant ID, swapchain image index, format, extent, internal native image/image-view handles, and a single-subresource layout tracker initialized to `Present`. A52 deliberately does not copy, blit, render, emit barriers, acquire, present, add a frame loop, add Dominatus policy, or treat swapchain images as `AurelianVulkanTexture` allocations. Recommended next milestone: **A53 — Vulkan compositor passthrough copy M0**.
+
+
+## A53 update — Vulkan compositor passthrough copy M0
+
+A53 is implemented in `Aurelian.Graphics.Vulkan.Compositor` as a mechanism-only milestone. It executes neutral passthrough compositor dispatch requests by resolving one `PlantOutputRef` to a non-owning offscreen texture wrapper, resolving one `PresentationTargetRef` to an acquired swapchain image wrapper, transitioning source/target layouts, recording `vkCmdCopyImage`, restoring the source layout, returning the target to `Present`, and synchronously submitting through the existing command submitter.
+
+The roadmap remains split: runtime/Dominatus compositor policy is still future work, while the graphics mechanism can now perform the M0 copy operation. Differential composition, reduced-frequency policy, multi-GPU external memory, compute composition, render graph integration, and asset/shader integration remain outside this milestone. The recommended next step is **A54 — First visible triangle through compositor path** once presentation semaphore integration is acceptable for the proof, otherwise **A54 — Compositor present semaphore integration M0**.
