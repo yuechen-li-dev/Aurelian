@@ -289,3 +289,11 @@ Status: implemented.
 A51 adds the neutral compositor DTO layer under `Aurelian.Rendering.Contracts.Compositor`. The contracts model compositor policy kinds, symbolic plant output refs, symbolic presentation target refs, plant output readiness statuses/facts, required output sets with pure readiness satisfaction, compositor diagnostics, frame facts, dispatch requests, dispatch statuses, dispatch diagnostics, and dispatch results.
 
 A51 remains contracts-only: no Vulkan or Silk types, no Dominatus/runtime policy implementation, no graphics compositor mechanism, no world dependency, no new packages, and no new project references. The recommended next milestone is **A52 — Swapchain image wrappers M0**, because the backend mechanism next needs acquired presentation images to be addressable without making neutral contracts own graphics handles.
+
+## A52 — Swapchain image wrappers M0
+
+Status: implemented.
+
+A52 makes swapchain images addressable as backend compositor/presentation targets without transferring ownership away from the swapchain/window-system path. `Aurelian.Graphics.Vulkan.Compositor` now contains non-owning `VulkanPresentationTargetImage` wrappers, ordered `VulkanPresentationTargetImageSet` collections, and a `VulkanPresentationTargetResolver` that maps neutral `PresentationTargetRef` values to backend wrappers with typed diagnostics.
+
+Each wrapper records the plant ID, swapchain image index, format, extent, internal native image/image-view handles, and a single-subresource layout tracker initialized to `Present`. A52 deliberately does not copy, blit, render, emit barriers, acquire, present, add a frame loop, add Dominatus policy, or treat swapchain images as `AurelianVulkanTexture` allocations. Recommended next milestone: **A53 — Vulkan compositor passthrough copy M0**.

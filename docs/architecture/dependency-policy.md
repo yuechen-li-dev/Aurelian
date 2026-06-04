@@ -321,3 +321,9 @@ Runtime compositor policy belongs in `Aurelian.Runtime/Compositor` because runti
 A51 places compositor M0 DTOs in `Aurelian.Rendering.Contracts.Compositor`, preserving `Aurelian.Rendering.Contracts` as the neutral rendering contract assembly. The contracts may be consumed by future runtime policy and graphics mechanism code, but they do not reference `Aurelian.Graphics`, `Aurelian.Runtime`, `Aurelian.World`, Dominatus, Silk.NET, Vulkan handles, shader projects, or backend resource owners.
 
 The intended next step, **A52 — Swapchain image wrappers M0**, belongs in `Aurelian.Graphics`: it should wrap acquired swapchain images as backend mechanism targets, initialize presentation-image layout tracking, and keep ownership/handle details out of neutral contracts.
+
+## A52 swapchain image wrapper dependency note
+
+A52 keeps swapchain-image addressability inside `Aurelian.Graphics.Vulkan.Compositor`. The graphics mechanism now exposes non-owning presentation target wrappers for swapchain images and image views through `AurelianVulkanSwapchain.CreatePresentationTargetImageSet()`, while neutral `PresentationTargetRef` values from `Aurelian.Rendering.Contracts.Compositor` remain symbolic DTOs with no Vulkan handles.
+
+The wrappers are explicitly not ordinary allocated textures: they do not own image memory, do not call allocator APIs, do not destroy swapchain images, and do not destroy swapchain image views. Each wrapper carries plant ID, swapchain image index, format, extent, internal native handles, and a one-mip/one-layer `VulkanLayoutTracker` initialized to `Present`. Copy/blit, barrier emission, command submission, presentation, Dominatus policy, VMA/VMASharp, Vortice, CodeReferences changes, and shader/compiler dependencies remain deferred.

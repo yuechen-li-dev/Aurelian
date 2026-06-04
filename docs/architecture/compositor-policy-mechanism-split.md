@@ -223,7 +223,7 @@ A55 — First visible triangle through compositor path
   Connect offscreen draw output through compositor passthrough to presentation in a minimal frame loop proof.
 ```
 
-A51 should implement neutral contracts first. Implementing swapchain image wrappers first would force backend identities before the policy/mechanism seam is explicit.
+A51 implemented neutral contracts first. A52 then added graphics-side swapchain image wrappers after the policy/mechanism seam was explicit.
 
 ## 10. Anti-goals
 
@@ -244,3 +244,10 @@ A51 should implement neutral contracts first. Implementing swapchain image wrapp
 A51 implements the neutral compositor DTO layer in `Aurelian.Rendering.Contracts.Compositor`. It includes policy kinds, symbolic plant output and presentation target references, readiness facts, required-output satisfaction, diagnostics, frame facts, dispatch requests, dispatch statuses, dispatch diagnostics, and dispatch results.
 
 A51 intentionally adds no Vulkan/Silk handles, no graphics mechanism, no Dominatus/runtime policy, no world dependency, no new packages, and no new project references. The next recommended milestone is **A52 — Swapchain image wrappers M0**, which should make acquired presentation images addressable by the graphics mechanism while keeping contracts neutral.
+
+
+## 12. A52 implementation status
+
+A52 implements graphics-side swapchain image wrappers under `Aurelian.Graphics.Vulkan.Compositor`. The wrappers are backend mechanism targets, not neutral contracts and not ordinary allocated textures. `AurelianVulkanSwapchain.CreatePresentationTargetImageSet()` creates one non-owning wrapper per swapchain image, preserving image order and carrying plant ID, swapchain image index, format, extent, internal native image/image-view handles, and a per-image one-mip/one-layer layout tracker initialized to `Present`.
+
+`VulkanPresentationTargetResolver` maps neutral `PresentationTargetRef` values to backend wrappers and rejects missing image sets, plant mismatches, and out-of-range image indices with typed diagnostics. A52 still emits no barriers, copy/blit commands, render commands, queue submits, acquire calls, present calls, frame loop code, or Dominatus policy. The next recommended milestone is **A53 — Vulkan compositor passthrough copy M0**.
