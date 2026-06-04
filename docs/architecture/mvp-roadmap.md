@@ -106,3 +106,11 @@ A32 implements the pure barrier-planning foundation that must exist before textu
 The layout tracker is per subresource from M0: each mip/array-layer cell is stored in a flat `mip * arrayLayers + arrayLayer` array, invalid subresources are rejected with diagnostics, no-op transitions produce no plan, and `TransitionAll` emits only real transitions. Buffer transition planning is also pure data: host-write to transfer-read, transfer-write to vertex-read, and transfer-write to shader-read plans expose access/stage facts without recording Vulkan barriers.
 
 A32 deliberately records no `vkCmdPipelineBarrier` calls and introduces no textures, render passes, pipelines, descriptors, swapchains/windows/surfaces, or draws. The likely next step is `A33 — Texture resource M0`, because texture creation can now attach a per-subresource layout tracker without inventing layout semantics inside the texture milestone.
+
+## A33 — Vulkan Texture2D resource M0
+
+Status: implemented.
+
+A33 introduces the first Vulkan image resource for `Aurelian.Graphics`: a focused Texture2D M0 with Aurelian-owned create plans, texture usage and format vocabulary, `VkImage` creation, image memory requirement queries, allocator-backed memory ownership, image-memory binding, optional default color image-view creation, per-subresource layout tracker initialization, and safe disposal.
+
+The milestone deliberately keeps texture data movement and rendering out of scope. Upload staging, `vkCmdCopyBufferToImage`, image barrier command emission, descriptor sets, samplers, render passes, pipelines, draw calls, and swapchain/window/surface integration remain future milestones. A34 should be `Barrier command emission M1` because truthful texture upload and rendering paths need actual image/buffer barrier recording.
