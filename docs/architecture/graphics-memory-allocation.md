@@ -255,3 +255,12 @@ Each texture initializes a `VulkanLayoutTracker` for every mip level and array l
 A34 does not change allocation ownership, memory selection, or resource lifetime contracts. It adds command-buffer synchronization emission beside those contracts: buffer transition plans can now be emitted as `VkBufferMemoryBarrier` records, and texture layout plans can be emitted as color-aspect `VkImageMemoryBarrier` records. The emitter validates plant ownership and command-buffer recording state before issuing one batched `vkCmdPipelineBarrier` for the provided buffer and image barriers.
 
 Planning and allocation remain separate. `VulkanLayoutTracker` still records the planned image layout change when a transition plan is created; emission consumes that plan and does not mutate the tracker again. If command emission fails after planning, rollback/reconciliation remains deferred to a later submitted-layout/recording-layout design. Texture upload and `vkCmdCopyBufferToImage` are still deferred; raw `vkAllocateMemory`, `vkFreeMemory`, `vkMapMemory`, and `vkUnmapMemory` remain isolated to allocator backends.
+
+
+## 17. A35 texture upload M0 note
+
+A35 extends the allocation/upload boundary from buffers to whole Texture2D data without weakening allocator ownership. `VulkanTextureUploader` uses a temporary mapped `CpuToGpu` staging buffer created through `VulkanBufferFactory` and `IVulkanMemoryAllocator`; CPU bytes are copied with `AurelianVulkanBuffer.Write(...)`, so raw allocation and mapping calls remain isolated to allocator backends.
+
+The upload command path records image layout barriers around `vkCmdCopyBufferToImage`: the destination moves from its tracked layout to `TransferDestination`, receives the whole mip0/layer0 copy, and then moves to `ShaderResourceFragment`. The helper submits to the plant queue, signals `CommandListFence`, waits synchronously, retires the command buffer with the signal value, and disposes staging only after GPU completion.
+
+Supported in M0: whole Texture2D mip 0, array layer 0, four bytes per pixel (`Rgba8/Bgra8` unorm/srgb family), final `ShaderResourceFragment` layout. Deferred: mip generation, partial uploads, arrays/cubes/3D textures, upload rings, async staging retirement, samplers, descriptor sets, render passes, pipelines, draw commands, swapchains/windows/surfaces, VMA/VMASharp, and Vortice. As in A34, layout planning mutates the tracker before emission; rollback/reconciliation after rare emission failures remains deferred to a future transactional barrier API.

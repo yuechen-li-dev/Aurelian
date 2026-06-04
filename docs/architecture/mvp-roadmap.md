@@ -122,3 +122,20 @@ A34 implements the first Vulkan command-buffer emission path for the barrier/lay
 The API keeps pure planning and native handles separated. `VulkanBarrierPlan` and `VulkanBufferTransitionPlan` remain handle-free plan DTOs, while `VulkanTextureBarrierEmission` and `VulkanBufferBarrierEmission` pair those plans with the concrete Vulkan resource only at emission time. The layout tracker mutation discipline remains the A32 discipline: accepted planning mutates tracker state, and A34 emission consumes plans without mutating tracker state a second time. Rollback or submitted-vs-recording reconciliation after failed emission is explicitly deferred.
 
 A34 does not add texture upload, `vkCmdCopyBufferToImage`, render passes, framebuffers, pipelines, descriptors, swapchains, windows, surfaces, VMA/VMASharp, Vortice, or renderer execution. The recommended next milestone is A35 — Texture upload M0, because Vulkan textures, command buffers, staging buffer upload foundations, and barrier emission now exist.
+
+
+## A35 — Texture upload M0
+
+A35 adds `VulkanTextureUploader` as the first CPU-to-GPU Texture2D data path. The helper is per plant and depends explicitly on `AurelianVulkanPlant`, `IVulkanMemoryAllocator`, `VulkanCommandBufferPool`, and `VulkanFenceBundle`; it owns none of those dependencies and introduces no singleton/service-locator state.
+
+The M0 upload path is synchronous and intentionally narrow:
+
+1. validate the destination texture, plant ownership, `TransferDestination` usage, supported four-byte color format, and exact whole-texture byte size;
+2. create a temporary mapped `CpuToGpu` staging buffer with `TransferSource` usage;
+3. write CPU RGBA-like bytes through `AurelianVulkanBuffer.Write(...)`;
+4. record the destination image transition to `TransferDestination`;
+5. record `vkCmdCopyBufferToImage` for mip 0 / array layer 0 / full width-height-depth 1;
+6. record the destination image transition to `ShaderResourceFragment`;
+7. submit to the plant queue, signal `CommandListFence`, wait for the signal value, retire the command buffer, and only then dispose the staging buffer.
+
+A35 deliberately defers mip generation, partial region uploads, texture arrays/cubes/3D uploads, samplers, descriptor sets, render passes, pipelines, draw commands, swapchains/windows/surfaces, upload rings, async staging retirement, VMA/VMASharp, and Vortice.
