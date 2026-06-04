@@ -10,7 +10,7 @@ The next compositor work needs a clear contract seam because it sits between thr
 - runtime policy that can use Dominatus/HFSM/utility logic to decide what should happen this frame;
 - graphics mechanism that owns Vulkan images, barriers, commands, submission, and presentation synchronization.
 
-This document is design-only. It does not authorize implementation of swapchain image wrapping, image copy/blit, Vulkan commands, Dominatus runtime policy, or a frame loop.
+This document started as the A50 design audit. A51 has now implemented the neutral compositor contract layer in `Aurelian.Rendering.Contracts.Compositor`; the document still does not authorize swapchain image wrapping, image copy/blit, Vulkan commands, Dominatus runtime policy, or a frame loop.
 
 ## 2. What the compositor is and is not
 
@@ -41,7 +41,7 @@ Compositor mechanism (graphics/Vulkan):
 
 The two layers communicate through typed contracts. Contracts must be DTOs only: no Vulkan handles, no Silk.NET structs, no Dominatus types, no `Aurelian.Graphics` object references, and no world objects.
 
-## 4. Contract layer proposal
+## 4. Contract layer
 
 Neutral compositor contracts should live under:
 
@@ -51,7 +51,7 @@ src/Aurelian.Rendering.Contracts/Compositor/
 
 This matches existing renderer-independent render snapshots, command plans, and compiled shader contracts. Both `Aurelian.Runtime` and `Aurelian.Graphics` already depend on `Aurelian.Rendering.Contracts`, so this location allows policy and mechanism to share DTOs without either layer depending on the other.
 
-Recommended M0 contracts:
+A51 implemented the M0 contracts as neutral DTOs:
 
 ```csharp
 public enum CompositorPolicyKind
@@ -72,15 +72,25 @@ public readonly record struct PresentationTargetRef(
     uint SwapchainImageIndex,
     ulong FrameId);
 
+public enum PlantOutputReadinessStatus
+{
+    Missing,
+    Pending,
+    Ready,
+    Reused,
+    Failed,
+}
+
 public sealed record PlantOutputReadiness(
     PlantOutputRef Output,
-    bool Ready,
-    ulong? CompletedFenceValue,
+    PlantOutputReadinessStatus Status,
+    ulong? CompletedFenceValue = null,
     string? DiagnosticCode = null);
 
 public sealed record RequiredPlantOutputSet(
+    ulong FrameId,
     CompositorPolicyKind Policy,
-    IReadOnlyList<PlantOutputRef> Outputs);
+    IReadOnlyList<PlantOutputRef> RequiredOutputs);
 
 public sealed record CompositorDiagnostics(
     double? AgreementRate,
@@ -106,16 +116,21 @@ public enum CompositorDispatchStatus
     Failed,
 }
 
+public sealed record CompositorDispatchDiagnostic(
+    string Code,
+    CompositorDispatchDiagnosticSeverity Severity,
+    string Message);
+
 public sealed record CompositorDispatchResult(
     CompositorDispatchStatus Status,
     ulong FrameId,
     CompositorPolicyKind Policy,
     PresentationTargetRef Target,
     CompositorDiagnostics Diagnostics,
-    IReadOnlyList<string> DiagnosticCodes);
+    IReadOnlyList<CompositorDispatchDiagnostic> DispatchDiagnostics);
 ```
 
-M0 should keep this set intentionally small. It should name images and targets symbolically rather than expose backend handles. If a later milestone needs richer identities, add fields to these contracts instead of leaking Vulkan owners into runtime policy.
+M0 keeps this set intentionally small. It names images and targets symbolically rather than exposing backend handles. `RequiredPlantOutputSet.IsSatisfiedBy(...)` is pure readiness matching for policy tests: every required output must have matching `Ready` or `Reused` readiness, and extra readiness entries are ignored. If a later milestone needs richer identities, add fields to these contracts instead of leaking Vulkan owners into runtime policy.
 
 ## 5. Runtime Dominatus policy proposal
 
@@ -222,3 +237,10 @@ A51 should implement neutral contracts first. Implementing swapchain image wrapp
 - No differential rendering until passthrough works.
 - No frame loop or renderer facade as part of the contract milestone.
 - No vendor/Dominatus or CodeReferences modifications for compositor M0.
+
+
+## 11. A51 implementation status
+
+A51 implements the neutral compositor DTO layer in `Aurelian.Rendering.Contracts.Compositor`. It includes policy kinds, symbolic plant output and presentation target references, readiness facts, required-output satisfaction, diagnostics, frame facts, dispatch requests, dispatch statuses, dispatch diagnostics, and dispatch results.
+
+A51 intentionally adds no Vulkan/Silk handles, no graphics mechanism, no Dominatus/runtime policy, no world dependency, no new packages, and no new project references. The next recommended milestone is **A52 — Swapchain image wrappers M0**, which should make acquired presentation images addressable by the graphics mechanism while keeping contracts neutral.

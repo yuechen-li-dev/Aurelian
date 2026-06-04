@@ -170,3 +170,10 @@ A49 still does not render into swapchain images, does not add a compositor, does
 ## A50 Compositor policy/mechanism split audit
 
 A50 documents the compositor as a policy/mechanism split before passthrough implementation. Neutral compositor contracts should live in `Aurelian.Rendering.Contracts/Compositor`; runtime compositor policy should live in `Aurelian.Runtime/Compositor` and use Dominatus/HFSM/utility logic; Vulkan compositor mechanism should live in `Aurelian.Graphics/Vulkan/Compositor` and execute typed dispatch requests without depending on Dominatus. A50 is docs-only: no compositor, swapchain image wrapping, copy/blit commands, runtime policy code, source projects, packages, vendor, or CodeReferences were changed. The recommended next milestone is `A51 — Compositor contracts M0`.
+
+
+## A51 Compositor contracts M0
+
+A51 implements the neutral compositor contract layer in `Aurelian.Rendering.Contracts.Compositor`. The M0 DTOs cover compositor policy kinds, symbolic plant output refs, symbolic presentation target refs, readiness facts, required-output satisfaction, compositor diagnostics, frame facts, dispatch requests, and dispatch result/status/diagnostics.
+
+This is contracts-only work: no Vulkan/Silk handles are exposed, no Dominatus/runtime compositor policy is implemented, no graphics compositor mechanism is added, and no new packages or project references are introduced. The recommended next milestone is `A52 — Swapchain image wrappers M0`, which should make acquired swapchain images addressable as graphics mechanism targets while keeping contracts neutral.
