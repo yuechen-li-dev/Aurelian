@@ -181,3 +181,9 @@ Mapped memory is represented through Aurelian-owned allocation and buffer contra
 A31 keeps device-local buffer upload support inside the existing Aurelian-owned dependency boundaries. The upload helper may record `vkCmdCopyBuffer` and submit a command buffer, but it does not allocate, free, map, or unmap raw memory directly; staging memory is created through `VulkanBufferFactory` and `IVulkanMemoryAllocator`, and CPU writes go through `AurelianVulkanBuffer.Write(...)`. Command recording uses `VulkanCommandBufferPool`, and synchronization uses `VulkanFenceBundle.CommandListFence`.
 
 The M0 upload path is intentionally synchronous: it waits for the submitted timeline fence value before disposing temporary staging resources. Upload rings, batching, persistent staging pools, async fence-retired staging, texture uploads, barriers/layout tracking, and renderer-facing draw infrastructure remain future work rather than new dependency policy.
+
+## A32 barrier/layout dependency note
+
+A32 keeps barrier state as an Aurelian-owned model even though the mapper exposes Silk.NET Vulkan facts at the backend boundary. Resource layouts, access masks, stages, transition plans, batches, diagnostics, and subresource tracking are defined in `Aurelian.Graphics`; callers do not depend on Stride, Vortice, VMA/VMASharp, or vendor/reference code.
+
+The mapper is intentionally deterministic and test-covered, while command emission is deferred so the pure state model can be validated without requiring a Vulkan runtime. Cross-plant transfer layouts are represented as explicit stubs with diagnostics instead of hiding future queue-family ownership transfer policy in globals or hardcoded queue-family indices.

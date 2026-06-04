@@ -230,3 +230,9 @@ The M0 upload path is deliberately one-shot and synchronous:
 6. wait for that timeline value before retiring the command buffer and disposing the staging buffer.
 
 This intentionally avoids unsafe staging lifetime: temporary staging memory is not freed until the GPU copy has completed. It also keeps raw allocation and mapping APIs isolated to allocator backends. Deferred work remains upload rings, batching, persistent staging pools, async/fence-retired staging, texture upload, barriers/layout tracking, non-coherent flush/invalidate policy, descriptors, swapchains/windows/surfaces, render passes, pipelines, and draws.
+
+## 14. A32 barrier/layout tracker M0 note
+
+A32 adds the resource-state transition vocabulary that sits beside, not inside, the allocation boundary. `Aurelian.Graphics.Vulkan.Resources.Barriers` defines Aurelian resource layouts, access flags, stage flags, Vulkan mapping facts, pure image barrier plans/batches, a per-subresource layout tracker, and buffer access transition plans. This keeps memory ownership (`VulkanMemoryAllocation` and `GpuResourceState`) separate from synchronization/layout planning while giving future buffer, texture, upload, and draw paths a common state vocabulary.
+
+The layout tracker is per mip and array layer from the start, avoiding the shared mutable `NativeLayout`/ignored-subresource pitfalls identified in the Stride reference audit. `TransitionAll` emits only subresources that actually change. Cross-plant transfer layouts are present as explicit stubs and map as transfer source/destination for M0 while queue-family ownership transfer planning remains deferred. No command emission, textures, render passes, pipelines, descriptors, swapchains/windows/surfaces, VMA/VMASharp, or Vortice work is introduced by A32.
