@@ -114,3 +114,11 @@ Status: implemented.
 A33 introduces the first Vulkan image resource for `Aurelian.Graphics`: a focused Texture2D M0 with Aurelian-owned create plans, texture usage and format vocabulary, `VkImage` creation, image memory requirement queries, allocator-backed memory ownership, image-memory binding, optional default color image-view creation, per-subresource layout tracker initialization, and safe disposal.
 
 The milestone deliberately keeps texture data movement and rendering out of scope. Upload staging, `vkCmdCopyBufferToImage`, image barrier command emission, descriptor sets, samplers, render passes, pipelines, draw calls, and swapchain/window/surface integration remain future milestones. A34 should be `Barrier command emission M1` because truthful texture upload and rendering paths need actual image/buffer barrier recording.
+
+## A34 — Barrier command emission M1
+
+A34 implements the first Vulkan command-buffer emission path for the barrier/layout work from A32. The milestone adds an emitter under `Aurelian.Graphics.Vulkan.Resources.Barriers` that lowers texture transition requests to `VkImageMemoryBarrier`, lowers buffer transition requests to `VkBufferMemoryBarrier`, ORs source/destination pipeline stages across all requests, and records one batched `vkCmdPipelineBarrier` through an already-recording `VulkanCommandBufferLease`.
+
+The API keeps pure planning and native handles separated. `VulkanBarrierPlan` and `VulkanBufferTransitionPlan` remain handle-free plan DTOs, while `VulkanTextureBarrierEmission` and `VulkanBufferBarrierEmission` pair those plans with the concrete Vulkan resource only at emission time. The layout tracker mutation discipline remains the A32 discipline: accepted planning mutates tracker state, and A34 emission consumes plans without mutating tracker state a second time. Rollback or submitted-vs-recording reconciliation after failed emission is explicitly deferred.
+
+A34 does not add texture upload, `vkCmdCopyBufferToImage`, render passes, framebuffers, pipelines, descriptors, swapchains, windows, surfaces, VMA/VMASharp, Vortice, or renderer execution. The recommended next milestone is A35 — Texture upload M0, because Vulkan textures, command buffers, staging buffer upload foundations, and barrier emission now exist.

@@ -249,3 +249,9 @@ The allocator boundary is unchanged and explicit:
 - `GpuResourceState` carries `PlantId`, allocation byte size, and allocation backend for later bind-time and retirement checks.
 
 Each texture initializes a `VulkanLayoutTracker` for every mip level and array layer using the accepted initial layout. M0 accepts only `VulkanResourceLayout.Undefined`; non-undefined initial layouts are rejected because no barrier command emission exists yet to make shader-resource, transfer, or attachment layouts true. Texture upload, `vkCmdCopyBufferToImage`, image barrier command emission, samplers, descriptors, render passes, pipelines, swapchains/windows/surfaces, VMA/VMASharp, and Vortice remain deferred.
+
+## 16. A34 barrier command emission M1 note
+
+A34 does not change allocation ownership, memory selection, or resource lifetime contracts. It adds command-buffer synchronization emission beside those contracts: buffer transition plans can now be emitted as `VkBufferMemoryBarrier` records, and texture layout plans can be emitted as color-aspect `VkImageMemoryBarrier` records. The emitter validates plant ownership and command-buffer recording state before issuing one batched `vkCmdPipelineBarrier` for the provided buffer and image barriers.
+
+Planning and allocation remain separate. `VulkanLayoutTracker` still records the planned image layout change when a transition plan is created; emission consumes that plan and does not mutate the tracker again. If command emission fails after planning, rollback/reconciliation remains deferred to a later submitted-layout/recording-layout design. Texture upload and `vkCmdCopyBufferToImage` are still deferred; raw `vkAllocateMemory`, `vkFreeMemory`, `vkMapMemory`, and `vkUnmapMemory` remain isolated to allocator backends.
