@@ -152,3 +152,11 @@ A36 introduces `Aurelian.Graphics.Vulkan.Pipelines.RenderPasses` as the first ex
 A37 implements the first native framebuffer object over the existing Vulkan render pass and Texture2D resource layers. The M0 descriptor is Aurelian-owned plain data: a framebuffer width, height, and exactly one color attachment texture. Creation validates the plant identity, render pass identity, attachment count, attachment lifetime, dimensions, color-attachment usage, native image-view availability, and render-pass/texture format compatibility before calling `vkCreateFramebuffer`.
 
 This deliberately avoids Stride's hidden command-list-side render pass/framebuffer creation and avoids framebuffer cache complexity before descriptors and compatibility keys stabilize. `AurelianVulkanFramebuffer` owns only the native `VkFramebuffer`; disposing it does not dispose the render pass or attachment textures. Deferred work remains framebuffer caches, command-buffer render pass begin/end, pipelines, draw commands, swapchains/windows/surfaces, depth/stencil, MSAA, MRT, descriptor sets, VMA/VMASharp, and Vortice. Recommended next step: `A38 — Render pass begin/end command M0`.
+
+## A38 render pass begin/end command M0 note
+
+A38 adds the first render-pass boundary command helper in `Aurelian.Graphics`. `VulkanRenderPassCommandEncoder` records `vkCmdBeginRenderPass` and `vkCmdEndRenderPass` into an existing per-plant primary command-buffer lease. The begin request is explicit: an existing `AurelianVulkanRenderPass`, an existing compatible `AurelianVulkanFramebuffer`, and one color clear value. M0 derives the render area from the framebuffer dimensions and uses inline subpass contents.
+
+The command model intentionally remains narrow. The encoder keeps active render-pass state local to the encoder instance, validates that the command buffer is recording, validates plant compatibility, validates render pass/framebuffer lifetime and ownership, rejects framebuffers created for another render pass, rejects double-begin, and rejects end-without-begin. Tests still skip cleanly when Vulkan is unavailable.
+
+Still deferred: graphics pipeline descriptors/state, pipeline binding, draw commands, vertex/index binding, descriptor sets, framebuffer caches, depth/stencil, MSAA, swapchains/windows/surfaces, VMA/VMASharp, and Vortice.

@@ -277,3 +277,9 @@ This means the A28-A35 allocation boundary remains unchanged: texture and buffer
 A37 adds native framebuffer creation but does not allocate GPU memory. Framebuffers reference an existing render pass and existing `AurelianVulkanTexture` color attachment image view; texture memory ownership remains with the Texture2D resource and `IVulkanMemoryAllocator` boundary from A28-A33. The framebuffer owner destroys only `VkFramebuffer` and never destroys the render pass, texture, image view, image, or allocation.
 
 The M0 compatibility checks ensure the framebuffer descriptor dimensions match the texture, the texture includes `ColorAttachment` usage and has a native image view, all resources belong to the same plant, and the render pass's one color attachment format matches the texture format. There is no framebuffer cache yet and no render pass begin/end command, pipeline, draw, swapchain/window/surface, depth/stencil, MSAA, MRT, descriptor-set, VMA/VMASharp, or Vortice work.
+
+## 20. A38 render pass begin/end command M0 allocation note
+
+A38 records render pass boundaries and does not allocate GPU memory. The command encoder consumes existing native owners created by earlier milestones: a recording `VulkanCommandBufferLease`, an `AurelianVulkanRenderPass`, and an `AurelianVulkanFramebuffer`. It writes one color clear value into `VkRenderPassBeginInfo` and records `vkCmdBeginRenderPass`/`vkCmdEndRenderPass` only after ownership, lifetime, recording-state, and render-pass/framebuffer compatibility validation passes.
+
+The allocator boundary remains unchanged: textures and buffers still own allocator-backed memory, framebuffers do not own texture memory, and render pass commands do not allocate, map, bind, upload, or free memory. There is still no graphics pipeline, draw path, vertex/index binding, descriptor-set binding, framebuffer cache, swapchain/window/surface, depth/stencil, MSAA, VMA/VMASharp, or Vortice work.
