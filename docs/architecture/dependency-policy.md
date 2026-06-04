@@ -327,3 +327,10 @@ The intended next step, **A52 — Swapchain image wrappers M0**, belongs in `Aur
 A52 keeps swapchain-image addressability inside `Aurelian.Graphics.Vulkan.Compositor`. The graphics mechanism now exposes non-owning presentation target wrappers for swapchain images and image views through `AurelianVulkanSwapchain.CreatePresentationTargetImageSet()`, while neutral `PresentationTargetRef` values from `Aurelian.Rendering.Contracts.Compositor` remain symbolic DTOs with no Vulkan handles.
 
 The wrappers are explicitly not ordinary allocated textures: they do not own image memory, do not call allocator APIs, do not destroy swapchain images, and do not destroy swapchain image views. Each wrapper carries plant ID, swapchain image index, format, extent, internal native handles, and a one-mip/one-layer `VulkanLayoutTracker` initialized to `Present`. Copy/blit, barrier emission, command submission, presentation, Dominatus policy, VMA/VMASharp, Vortice, CodeReferences changes, and shader/compiler dependencies remain deferred.
+
+
+## A53 compositor passthrough dependency note
+
+A53 keeps the compositor copy mechanism inside `Aurelian.Graphics.Vulkan.Compositor` and continues to consume only neutral contracts from `Aurelian.Rendering.Contracts.Compositor`. `Aurelian.Graphics` still does not reference `Aurelian.Runtime`, Dominatus, `Aurelian.World`, shader compiler projects, Vortice, VMA/VMASharp, CodeReferences, or service-locator/reflection paths.
+
+The new plant-output wrappers are non-owning views over existing `AurelianVulkanTexture` resources, and presentation targets remain non-owning swapchain image wrappers. Barrier emission is extended only enough to handle presentation target images without pretending that swapchain images are allocated textures. Policy selection, differential/reduced-frequency behavior, multi-GPU transfers, compute compositor pipelines, and present semaphore handoff remain deferred.

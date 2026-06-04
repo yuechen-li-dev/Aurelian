@@ -43,11 +43,20 @@ public static unsafe class VulkanBarrierCommandEmitter
         VulkanCommandBufferLease commandBuffer,
         IReadOnlyList<VulkanBufferBarrierEmission> bufferBarriers,
         IReadOnlyList<VulkanTextureBarrierEmission> textureBarriers)
+        => Emit(plant, commandBuffer, bufferBarriers, textureBarriers, []);
+
+    public static VulkanBarrierEmissionResult Emit(
+        AurelianVulkanPlant plant,
+        VulkanCommandBufferLease commandBuffer,
+        IReadOnlyList<VulkanBufferBarrierEmission> bufferBarriers,
+        IReadOnlyList<VulkanTextureBarrierEmission> textureBarriers,
+        IReadOnlyList<VulkanPresentationTargetBarrierEmission> presentationTargetBarriers)
     {
         ArgumentNullException.ThrowIfNull(bufferBarriers);
         ArgumentNullException.ThrowIfNull(textureBarriers);
+        ArgumentNullException.ThrowIfNull(presentationTargetBarriers);
 
-        if (bufferBarriers.Count == 0 && textureBarriers.Count == 0)
+        if (bufferBarriers.Count == 0 && textureBarriers.Count == 0 && presentationTargetBarriers.Count == 0)
         {
             return NoOp(VulkanBarrierEmissionDiagnosticCodes.EmptyBatch, "Barrier emission request is empty; no pipeline barrier was recorded.");
         }
@@ -59,6 +68,7 @@ public static unsafe class VulkanBarrierCommandEmitter
         ValidatePlantAndCommandBuffer(plant, commandBuffer, diagnostics);
         ValidateBufferBarriers(plant, bufferBarriers, diagnostics);
         ValidateTextureBarriers(plant, textureBarriers, diagnostics);
+        ValidatePresentationTargetBarriers(plant, presentationTargetBarriers, diagnostics);
         if (diagnostics.Any(static diagnostic => diagnostic.Severity == VulkanBarrierDiagnosticSeverity.Error))
         {
             return new VulkanBarrierEmissionResult(VulkanBarrierEmissionStatus.Rejected, 0, 0, diagnostics);
@@ -71,6 +81,7 @@ public static unsafe class VulkanBarrierCommandEmitter
                 .ToArray();
             ImageMemoryBarrier[] nativeImageBarriers = textureBarriers
                 .Select(static barrier => CreateImageBarrier(barrier.Texture.NativeImage, barrier.Plan))
+                .Concat(presentationTargetBarriers.Select(static barrier => CreateImageBarrier(barrier.Target.NativeImage, barrier.Plan)))
                 .ToArray();
 
             PipelineStageFlags sourceStages = PipelineStageFlags.None;
@@ -82,6 +93,12 @@ public static unsafe class VulkanBarrierCommandEmitter
             }
 
             foreach (VulkanTextureBarrierEmission barrier in textureBarriers)
+            {
+                sourceStages |= EnsureStage(barrier.Plan.OldMapping.StageMask, source: true);
+                destinationStages |= EnsureStage(barrier.Plan.NewMapping.StageMask, source: false);
+            }
+
+            foreach (VulkanPresentationTargetBarrierEmission barrier in presentationTargetBarriers)
             {
                 sourceStages |= EnsureStage(barrier.Plan.OldMapping.StageMask, source: true);
                 destinationStages |= EnsureStage(barrier.Plan.NewMapping.StageMask, source: false);
@@ -239,6 +256,61 @@ public static unsafe class VulkanBarrierCommandEmitter
                     VulkanBarrierEmissionDiagnosticCodes.UnsupportedBarrierPlan,
                     VulkanBarrierDiagnosticSeverity.Error,
                     "Cross-plant queue-family ownership transfers are deferred and cannot be emitted by A34 M1.",
+                    barrier.Plan.ResourceName,
+                    barrier.Plan.BaseMipLevel,
+                    barrier.Plan.BaseArrayLayer));
+            }
+        }
+    }
+
+
+    private static void ValidatePresentationTargetBarriers(
+        AurelianVulkanPlant plant,
+        IReadOnlyList<VulkanPresentationTargetBarrierEmission> barriers,
+        List<VulkanBarrierDiagnostic> diagnostics)
+    {
+        foreach (VulkanPresentationTargetBarrierEmission barrier in barriers)
+        {
+            if (barrier.Target.PlantId != plant.Context.Id)
+            {
+                diagnostics.Add(new VulkanBarrierDiagnostic(
+                    VulkanBarrierEmissionDiagnosticCodes.UnsupportedBarrierPlan,
+                    VulkanBarrierDiagnosticSeverity.Error,
+                    $"Presentation target '{barrier.Plan.ResourceName}' belongs to plant {barrier.Target.PlantId}, not emitter plant {plant.Context.Id}.",
+                    barrier.Plan.ResourceName,
+                    barrier.Plan.BaseMipLevel,
+                    barrier.Plan.BaseArrayLayer));
+            }
+
+            if (barrier.Target.NativeImage.Handle == 0)
+            {
+                diagnostics.Add(new VulkanBarrierDiagnostic(
+                    VulkanBarrierEmissionDiagnosticCodes.UnsupportedBarrierPlan,
+                    VulkanBarrierDiagnosticSeverity.Error,
+                    $"Presentation target '{barrier.Plan.ResourceName}' has no native Vulkan image handle.",
+                    barrier.Plan.ResourceName,
+                    barrier.Plan.BaseMipLevel,
+                    barrier.Plan.BaseArrayLayer));
+            }
+
+            if (barrier.Plan.LevelCount != 1 || barrier.Plan.LayerCount != 1 || barrier.Plan.BaseMipLevel != 0 || barrier.Plan.BaseArrayLayer != 0)
+            {
+                diagnostics.Add(new VulkanBarrierDiagnostic(
+                    VulkanBarrierEmissionDiagnosticCodes.UnsupportedBarrierPlan,
+                    VulkanBarrierDiagnosticSeverity.Error,
+                    $"Presentation target barrier '{barrier.Plan.ResourceName}' must address the single swapchain color subresource.",
+                    barrier.Plan.ResourceName,
+                    barrier.Plan.BaseMipLevel,
+                    barrier.Plan.BaseArrayLayer));
+            }
+
+            if (barrier.Plan.OldLayout is VulkanResourceLayout.CrossPlantTransferSource or VulkanResourceLayout.CrossPlantTransferDestination
+                || barrier.Plan.NewLayout is VulkanResourceLayout.CrossPlantTransferSource or VulkanResourceLayout.CrossPlantTransferDestination)
+            {
+                diagnostics.Add(new VulkanBarrierDiagnostic(
+                    VulkanBarrierEmissionDiagnosticCodes.UnsupportedBarrierPlan,
+                    VulkanBarrierDiagnosticSeverity.Error,
+                    "Cross-plant queue-family ownership transfers are deferred and cannot be emitted for presentation targets by A53 M0.",
                     barrier.Plan.ResourceName,
                     barrier.Plan.BaseMipLevel,
                     barrier.Plan.BaseArrayLayer));

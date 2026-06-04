@@ -36,6 +36,8 @@ public sealed unsafe class VulkanCommandSubmitter : IDisposable
 
     public PlantId PlantId { get; }
 
+    public ulong LastKnownCompletedFenceValue => fences.CommandListFence.LastKnownCompletedValue;
+
     public VulkanCommandSubmitResult Submit(VulkanCommandSubmitRequest request)
     {
         List<VulkanCommandSubmitDiagnostic> diagnostics = [];
