@@ -177,3 +177,9 @@ A50 documents the compositor as a policy/mechanism split before passthrough impl
 A51 implements the neutral compositor contract layer in `Aurelian.Rendering.Contracts.Compositor`. The M0 DTOs cover compositor policy kinds, symbolic plant output refs, symbolic presentation target refs, readiness facts, required-output satisfaction, compositor diagnostics, frame facts, dispatch requests, and dispatch result/status/diagnostics.
 
 This is contracts-only work: no Vulkan/Silk handles are exposed, no Dominatus/runtime compositor policy is implemented, no graphics compositor mechanism is added, and no new packages or project references are introduced. The recommended next milestone is `A52 — Swapchain image wrappers M0`, which should make acquired swapchain images addressable as graphics mechanism targets while keeping contracts neutral.
+
+## A52 Swapchain image wrappers M0
+
+A52 adds graphics-side swapchain image wrappers under `Aurelian.Graphics.Vulkan.Compositor`. `AurelianVulkanSwapchain.CreatePresentationTargetImageSet()` creates one non-owning `VulkanPresentationTargetImage` per swapchain image, preserving swapchain image order and exposing plant ID, image index, format, extent, and per-image layout tracking while keeping native image/image-view handles internal.
+
+The wrappers do not own image memory, do not call allocator APIs, do not destroy swapchain images, do not destroy swapchain image views, and do not pretend presentation images are ordinary `AurelianVulkanTexture` allocations. The initial layout tracker convention is `Present` for mip 0/layer 0. Neutral `PresentationTargetRef` values now resolve to backend wrappers through typed graphics diagnostics; compositor passthrough copy/blit remains deferred to `A53 — Vulkan compositor passthrough copy M0`.

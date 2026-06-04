@@ -1,4 +1,5 @@
 using Aurelian.Graphics.Plants;
+using Aurelian.Graphics.Vulkan.Compositor;
 using Aurelian.Graphics.Vulkan.Device;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
@@ -40,6 +41,11 @@ public sealed class AurelianVulkanSwapchain : IDisposable
     public IReadOnlyList<Image> Images { get; }
 
     public IReadOnlyList<ImageView> ImageViews { get; }
+
+    public bool IsDisposed => disposed;
+
+    public VulkanPresentationTargetImageSet CreatePresentationTargetImageSet()
+        => VulkanPresentationTargetImageSet.FromSwapchain(this);
 
     public unsafe VulkanSwapchainAcquireResult AcquireNextImage(ulong timeoutNanoseconds = ulong.MaxValue)
     {
