@@ -424,3 +424,9 @@ No dependency boundary is relaxed: Runtime remains graphics-free, Graphics remai
 A67 is a sample-local lifecycle update only. The visible triangle sample may hold a finite queue of acquired swapchain image indices and finite per-frame `PlantOutputRef` wrappers because it owns the prepared Vulkan setup, but this does not move Vulkan/window/swapchain creation into Core or Runtime.
 
 The dependency boundaries remain unchanged: Runtime stays graphics-free, Graphics stays runtime/Dominatus-free, Core remains the high-level frame/engine spine, and the sample adds no package references, runtime shader compiler dependency, asset dependency, service locator, singleton, reflection construction path, VMA/VMASharp, Vortice, CodeReferences change, or vendor modification.
+
+## A68 visible-sample event pump boundary
+
+A68 uses the existing Silk.NET Windowing dependency only inside the Vulkan presentation owner and the visible sample. `AurelianVulkanSurface` exposes a narrow close-status property for its owned window in addition to its existing event pump; it does not expose raw `IWindow`, keyboard devices, or a general input abstraction. The sample keeps close handling in `samples/Aurelian.VisibleTriangle` through `VisibleTriangleWindowState`, and Core/Runtime continue to receive only frame input/provider and presentation contracts.
+
+The dependency boundary remains unchanged: no new package references, no production host/window lifecycle, no service locator or singleton, no runtime shader compiler dependency, and no graphics dependency on `Aurelian.Shaders` or asset tooling.

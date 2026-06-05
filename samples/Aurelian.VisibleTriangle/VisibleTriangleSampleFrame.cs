@@ -66,7 +66,8 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         AurelianFramePump framePump,
         AurelianFrameId startFrameId,
         VisibleTriangleFrameInputProvider inputProvider,
-        VisibleTriangleSamplePresentationMechanism presentationMechanism)
+        VisibleTriangleSamplePresentationMechanism presentationMechanism,
+        VisibleTriangleWindowState windowState)
     {
         this.plant = plant;
         this.surface = surface;
@@ -87,6 +88,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         StartFrameId = startFrameId;
         InputProvider = inputProvider;
         PresentationMechanism = presentationMechanism;
+        WindowState = windowState;
     }
 
     public AurelianEngine Engine { get; }
@@ -98,6 +100,10 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
     public VisibleTriangleFrameInputProvider InputProvider { get; }
 
     public VisibleTriangleSamplePresentationMechanism PresentationMechanism { get; }
+
+    public VisibleTriangleWindowState WindowState { get; }
+
+    public bool CloseRequested => WindowState.CloseRequested;
 
     public string SwapchainDescription => $"{swapchain.Facts.Width}x{swapchain.Facts.Height} {swapchain.Facts.SelectedFormat} {swapchain.Facts.SelectedPresentMode}";
 
@@ -177,8 +183,9 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                 VulkanPlantOutputImageSet outputs = CreateFinitePlantOutputImageSet(plant.Context.Id.Value, startFrameId, frameCount, outputImageId, offscreenColor);
                 VulkanPresentationTargetImageSet presentationTargets = swapchain.CreatePresentationTargetImageSet();
                 var pendingPresentImageIndices = new Queue<uint>();
-                var inputProvider = new VisibleTriangleFrameInputProvider(swapchain, plant.Context.Id.Value, outputImageId, pendingPresentImageIndices, frameCount);
-                var presentationMechanism = new VisibleTriangleSamplePresentationMechanism(swapchain, pendingPresentImageIndices, swapchainResult.Surface is null ? null : swapchainResult.Surface.PumpEvents);
+                var windowState = new VisibleTriangleWindowState();
+                var inputProvider = new VisibleTriangleFrameInputProvider(swapchain, plant.Context.Id.Value, outputImageId, pendingPresentImageIndices, windowState, swapchainResult.Surface, frameCount);
+                var presentationMechanism = new VisibleTriangleSamplePresentationMechanism(swapchain, pendingPresentImageIndices, windowState, swapchainResult.Surface);
                 var adapter = new VulkanCompositorMechanismAdapter(compositor, outputs, presentationTargets);
                 var preparedGraphics = new AurelianPreparedGraphicsSubsystem(
                     AurelianEngineGraphicsOptions.PreparedVisible,
@@ -215,7 +222,8 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                     framePump,
                     startFrameId,
                     inputProvider,
-                    presentationMechanism);
+                    presentationMechanism,
+                    windowState);
             }
             catch
             {
@@ -231,7 +239,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         }
     }
 
-    public void PumpEvents() => surface?.PumpEvents();
+    public void PumpEvents() => WindowState.Pump(surface);
 
     public void Dispose()
     {

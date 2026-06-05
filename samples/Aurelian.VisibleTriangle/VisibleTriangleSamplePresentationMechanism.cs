@@ -7,19 +7,23 @@ internal sealed class VisibleTriangleSamplePresentationMechanism : IPresentation
 {
     private readonly AurelianVulkanSwapchain swapchain;
     private readonly Queue<uint> pendingPresentImageIndices;
-    private readonly Action? pumpEventsAfterPresent;
+    private readonly VisibleTriangleWindowState windowState;
+    private readonly AurelianVulkanSurface? surface;
     private readonly List<string> diagnostics = new();
 
     public VisibleTriangleSamplePresentationMechanism(
         AurelianVulkanSwapchain swapchain,
         Queue<uint> pendingPresentImageIndices,
-        Action? pumpEventsAfterPresent = null)
+        VisibleTriangleWindowState windowState,
+        AurelianVulkanSurface? surface)
     {
         ArgumentNullException.ThrowIfNull(swapchain);
         ArgumentNullException.ThrowIfNull(pendingPresentImageIndices);
+        ArgumentNullException.ThrowIfNull(windowState);
         this.swapchain = swapchain;
         this.pendingPresentImageIndices = pendingPresentImageIndices;
-        this.pumpEventsAfterPresent = pumpEventsAfterPresent;
+        this.windowState = windowState;
+        this.surface = surface;
     }
 
     public IReadOnlyList<string> Diagnostics => diagnostics;
@@ -33,8 +37,12 @@ internal sealed class VisibleTriangleSamplePresentationMechanism : IPresentation
 
         uint imageIndex = pendingPresentImageIndices.Dequeue();
         VulkanSwapchainPresentResult result = swapchain.Present(imageIndex);
-        pumpEventsAfterPresent?.Invoke();
+        windowState.Pump(surface);
         diagnostics.Add($"Presented acquired swapchain image {imageIndex} with status {result.Status}.");
+        if (windowState.CloseRequested)
+        {
+            diagnostics.Add("Window close was requested after presentation event pump.");
+        }
         return result;
     }
 

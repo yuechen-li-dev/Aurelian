@@ -20,8 +20,8 @@ internal static class Program
         bool skipHold = args.Contains("--no-hold", StringComparer.OrdinalIgnoreCase);
         int frameCount = ParseFrameCount(args);
 
-        Console.WriteLine("Aurelian A67 visible triangle sample");
-        Console.WriteLine("Path: prepared Vulkan setup -> AurelianEngine -> AurelianRuntimeSession -> AurelianFrameLoop -> runtime tick -> frame pump -> runtime compositor policy -> core compositor bridge -> Vulkan compositor -> present");
+        Console.WriteLine("Aurelian A68 visible triangle sample");
+        Console.WriteLine("Path: prepared Vulkan setup -> AurelianEngine -> AurelianRuntimeSession -> AurelianFrameLoop -> runtime tick -> frame pump -> runtime compositor policy -> core compositor bridge -> Vulkan compositor -> present -> sample-local event pump/close detection");
         Console.WriteLine($"Validation: {(enableValidation ? "enabled" : "disabled")}");
         Console.WriteLine($"Selected finite frame count: {frameCount} (default {DefaultFrameCount}, max {MaximumFrameCount}).");
 
@@ -33,6 +33,7 @@ internal static class Program
         {
             sample = VisibleTriangleSampleFrame.Create(enableValidation, frameCount);
             Console.WriteLine($"Prepared visible Vulkan setup created ({sample.SwapchainDescription}); swapchain images will be acquired per frame.");
+            Console.WriteLine("Window events will be pumped before each acquire and after each present; close requests stop the finite frame loop cleanly.");
             Console.WriteLine($"Engine status after start: {sample.Engine.Status}; graphics mode: {sample.Engine.Options.Graphics.Mode} ({sample.Engine.Options.Graphics.Ownership}).");
 
             runtimeSession = new AurelianRuntimeSession();
@@ -62,13 +63,18 @@ internal static class Program
 
             AurelianFrameLoopResult loopResult = await frameLoop.RunAsync(sample.StartFrameId).ConfigureAwait(false);
             PrintLoopResult(loopResult);
-            PrintSampleDiagnostics(inputProvider, sample.PresentationMechanism);
+            if (sample.CloseRequested)
+            {
+                Console.WriteLine("Window close requested; stopped frame loop.");
+            }
+
+            PrintSampleDiagnostics(inputProvider, sample.PresentationMechanism, sample.WindowState);
 
             if (!skipHold && loopResult.Success)
             {
                 Console.WriteLine("Keeping the window responsive briefly (pass --no-hold to exit immediately). ");
                 DateTimeOffset end = DateTimeOffset.UtcNow.AddSeconds(2);
-                while (DateTimeOffset.UtcNow < end)
+                while (DateTimeOffset.UtcNow < end && !sample.CloseRequested)
                 {
                     sample.PumpEvents();
                     await Task.Delay(16).ConfigureAwait(false);
@@ -79,13 +85,13 @@ internal static class Program
         }
         catch (VisibleTriangleSampleException ex)
         {
-            Console.Error.WriteLine("A67 visible triangle sample could not run in this environment or failed during the Vulkan sample path.");
+            Console.Error.WriteLine("A68 visible triangle sample could not run in this environment or failed during the Vulkan sample path.");
             Console.Error.WriteLine(ex.Message);
             return EnvironmentOrRuntimeFailure;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("A67 visible triangle sample hit an unexpected exception.");
+            Console.Error.WriteLine("A68 visible triangle sample hit an unexpected exception.");
             Console.Error.WriteLine(ex);
             return UnexpectedFailure;
         }
@@ -184,8 +190,11 @@ internal static class Program
 
     private static void PrintSampleDiagnostics(
         VisibleTriangleFrameInputProvider inputProvider,
-        VisibleTriangleSamplePresentationMechanism presentationMechanism)
+        VisibleTriangleSamplePresentationMechanism presentationMechanism,
+        VisibleTriangleWindowState windowState)
     {
+        Console.WriteLine($"Window event pump count: {windowState.PumpCount}; close requested: {windowState.CloseRequested}.");
+
         if (inputProvider.Frames.Count > 0)
         {
             Console.WriteLine("Sample frame acquire/present state:");
@@ -193,6 +202,11 @@ internal static class Program
             {
                 Console.WriteLine($"Frame {frame.FrameId.Value}: acquired swapchain image {frame.SwapchainImageIndex}; target={frame.PresentationTarget}; output={frame.PlantOutput}.");
             }
+        }
+
+        foreach (string diagnostic in windowState.Diagnostics)
+        {
+            Console.WriteLine($"Window diagnostic: {diagnostic}");
         }
 
         foreach (string diagnostic in inputProvider.Diagnostics)

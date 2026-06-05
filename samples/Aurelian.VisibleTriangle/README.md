@@ -1,6 +1,6 @@
 # Aurelian Visible Triangle sample
 
-This A67 sample executable demonstrates the current prepared-visible Aurelian engine spine across a small finite set of visible frames:
+This A68 sample executable demonstrates the current prepared-visible Aurelian engine spine across a small finite set of visible frames:
 
 ```text
 sample-owned prepared Vulkan setup
@@ -9,11 +9,13 @@ sample-owned prepared Vulkan setup
   -> AurelianFrameLoop
   -> runtime tick each frame
   -> frame pump
+  -> sample-local event pump before acquire
   -> per-frame swapchain acquire
   -> Runtime compositor policy
   -> Core compositor bridge
   -> Vulkan compositor mechanism
   -> per-frame present
+  -> sample-local event pump after present
 ```
 
 ## Run
@@ -32,7 +34,9 @@ Optional flags:
 
 When Vulkan presentation and a windowing environment are available, the sample opens a small window titled **Aurelian Visible Triangle**, renders a static triangle once to an offscreen Vulkan color target, starts `AurelianEngine`, starts a Dominatus-backed `AurelianRuntimeSession`, and runs `AurelianFrameLoop` for the selected finite frame count.
 
-For each frame, the sample-local input provider acquires a fresh swapchain image, creates a frame-specific `PresentationTargetRef`, creates frame-specific `AurelianFrameInput`, and records sample diagnostics. The runtime tick and compositor policy run each frame; the Core bridge dispatches the Vulkan compositor passthrough each frame; the sample-local presentation mechanism then presents the exact image index acquired for that completed frame.
+For each frame, the sample-local input provider first pumps the owned window's platform events, checks whether close was requested, and stops by returning `null` if the user has closed the window. Otherwise it acquires a fresh swapchain image, creates a frame-specific `PresentationTargetRef`, creates frame-specific `AurelianFrameInput`, and records sample diagnostics. The runtime tick and compositor policy run each frame; the Core bridge dispatches the Vulkan compositor passthrough each frame; the sample-local presentation mechanism then presents the exact image index acquired for that completed frame and pumps window events again after presentation.
+
+When a close request is observed before a new acquire, `AurelianFrameLoop` stops through its existing `InputProviderCompleted` completion path and the sample prints `Window close requested; stopped frame loop.` along with frame/pump diagnostics. If the requested finite frame count is reached first, the sample exits normally after the selected number of frames.
 
 The offscreen triangle is static/reused for M0. Setup creates finite `PlantOutputRef` wrappers for each planned frame ID, and each wrapper resolves to the same offscreen texture so this milestone exercises acquire/present lifecycle rather than animation or redraw scheduling.
 
@@ -40,6 +44,6 @@ If Vulkan, presentation, or the windowing platform is unavailable, the sample pr
 
 ## Boundaries
 
-The sample deliberately does **not** implement an infinite game loop, editor host, `Aurelian.Host`, asset loading, world integration, render graph, input system, scheduler/threading system, differential compositor, runtime shader compilation, or a runtime DXC/SDSL dependency. The triangle shaders are tiny static SPIR-V byte fixtures copied into the sample so the executable can exercise the Vulkan compositor path without depending on test projects or shader tooling.
+The sample deliberately does **not** implement an infinite game loop, editor host, `Aurelian.Host`, production input system, engine-owned window lifecycle, asset loading, world integration, render graph, scheduler/threading system, differential compositor, runtime shader compilation, or a runtime DXC/SDSL dependency. The triangle shaders are tiny static SPIR-V byte fixtures copied into the sample so the executable can exercise the Vulkan compositor path without depending on test projects or shader tooling.
 
 The sample still owns Vulkan/window/swapchain setup externally and passes prepared resources into Core. Core frame loop and frame pump remain free of Vulkan/window/swapchain creation.
