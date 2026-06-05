@@ -234,3 +234,11 @@ Status: implemented.
 A60 adds a headless-safe integration proof that the one-frame Core pump can drive the real visible Vulkan compositor path through prepared inputs and prepared mechanisms. The test-owned harness creates the presentation Vulkan plant, swapchain, acquired image, offscreen triangle source, command/fence/allocator resources, `VulkanCompositorPassthrough`, `VulkanCompositorMechanismAdapter`, `CompositorActuationBridge`, and started `AurelianEngine`, then calls `AurelianFramePump.RunOneFrameAsync(...)` with explicit compositor policy facts.
 
 The frame pump remains a consumer of prepared frame inputs and mechanisms. It still does not create a Vulkan plant, surface/window, swapchain, textures, command pools, compositor mechanism, graphics resources, continuous frame loop, production host object, or `Aurelian.Host` project. Production frame loop ownership and engine graphics subsystem options remain deferred.
+
+## A61 — Engine graphics subsystem options M0
+
+Status: implemented.
+
+A61 adds explicit Core-side graphics subsystem vocabulary under `Aurelian.Core.Engine.Graphics`. Core now distinguishes `Headless` and `PreparedVisible` graphics modes, supports only `External` ownership in M0, and models externally prepared compositor/presentation mechanisms as an `AurelianPreparedGraphicsSubsystem` bundle with typed validation diagnostics.
+
+The A61 model is configuration/lifecycle vocabulary only. It does not create Vulkan plants, surfaces/windows, swapchains, command pools, graphics resources, a continuous frame loop, a visible sample executable, or an `Aurelian.Host` project. Future visible frame-loop/sample work should consume a validated prepared subsystem instead of hiding graphics ownership inside `AurelianFramePump`.
