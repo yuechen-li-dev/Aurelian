@@ -270,3 +270,11 @@ The A55 tests use a fake Dominatus actuator, not Vulkan, to prove the actuation 
 A56 composes the split only in `tests/Aurelian.Integration.Tests`. The integration project may reference `Aurelian.Runtime`, `Aurelian.Graphics`, and `Aurelian.Rendering.Contracts` because tests are the temporary host boundary for this proof. It registers Dominatus `CompositorDispatchAct` handlers in test code: one fake handler captures the neutral passthrough request, and one real handler delegates to `VulkanCompositorPassthrough.Dispatch(...)` with Vulkan plant-output and presentation-target wrappers.
 
 The production split remains unchanged. Runtime policy still emits only neutral compositor requests through a runtime-local act and does not reference graphics/Vulkan. The Vulkan compositor mechanism still consumes neutral requests and backend wrappers and does not reference runtime policy or Dominatus. A56 intentionally defers production host/frame-loop ownership until the frame pump shape is known.
+
+## A57 Core bridge promotion
+
+A57 moves the conceptual Runtime/Graphics bridge pattern proven by A56 into production Core without promoting the Vulkan-specific mechanism. `Aurelian.Core.Compositor.ICompositorMechanism` is the abstract, graphics-free mechanism seam: it accepts neutral `CompositorDispatchRequest` values and returns neutral `CompositorDispatchResult` values from `Aurelian.Rendering.Contracts.Compositor`.
+
+`Aurelian.Core.Compositor.CompositorActuationBridge` is the handler adapter between Runtime policy acts and that abstract mechanism. It depends on Runtime only for `CompositorDispatchAct` and on Rendering.Contracts for neutral compositor DTOs. It must not depend on `Aurelian.Graphics`, Silk.NET, Vulkan, swapchains, surfaces, or concrete presentation resources in A57.
+
+A future milestone may add a production Vulkan adapter that implements the Core mechanism seam while preserving the existing rule that Runtime does not reference Graphics and Graphics does not reference Runtime/Dominatus.

@@ -352,3 +352,11 @@ The bridge from runtime acts to graphics compositor mechanism is intentionally d
 A56 uses an integration test project as the only place where runtime compositor policy and graphics compositor mechanism are composed. This is an allowed test-only dependency boundary: `tests/Aurelian.Integration.Tests` references runtime, graphics, and rendering contracts to prove the seam without adding a production bridge assembly.
 
 Production dependency policy remains unchanged. `Aurelian.Runtime` may use Dominatus and neutral rendering contracts but must not reference `Aurelian.Graphics`; `Aurelian.Graphics` may use neutral rendering contracts and Silk.NET Vulkan plumbing but must not reference runtime policy or Dominatus; `Aurelian.Rendering.Contracts` stays neutral. A production host/frame pump is explicitly deferred rather than hidden behind service locators, global singletons, reflection, or new package dependencies.
+
+## A57 Core integration spine dependency rule
+
+A57 establishes `Aurelian.Core` as the engine integration spine M0 rather than adding an `Aurelian.Host` project. For this milestone, Core may reference `Aurelian.Runtime` and `Aurelian.Rendering.Contracts` so it can expose engine-level lifecycle identity and bridge Runtime compositor acts to neutral compositor mechanism contracts.
+
+Core remains graphics-free in A57. It must not reference `Aurelian.Graphics`, Silk.NET, Vulkan, swapchain/window/surface APIs, shader tooling, service locators, global singletons, reflection-based construction, vendor samples, or CodeReferences. Runtime remains free of Graphics, Graphics remains free of Runtime/Dominatus, and Rendering.Contracts remains a neutral DTO boundary.
+
+The production frame pump and concrete Vulkan compositor adapter are deferred. The next dependency decision should keep the Vulkan mechanism behind an Aurelian-owned adapter seam rather than letting Runtime or neutral contracts depend on backend details.
