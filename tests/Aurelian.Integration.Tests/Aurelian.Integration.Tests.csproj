@@ -11,6 +11,7 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/Aurelian.Core/Aurelian.Core.csproj" />
     <ProjectReference Include="../../src/Aurelian.Runtime/Aurelian.Runtime.csproj" />
     <ProjectReference Include="../../src/Aurelian.Graphics/Aurelian.Graphics.csproj" />
     <ProjectReference Include="../../src/Aurelian.Rendering.Contracts/Aurelian.Rendering.Contracts.csproj" />

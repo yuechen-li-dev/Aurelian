@@ -53,16 +53,16 @@ public sealed class CompositorActuationBridgeM0Tests
     }
 
     [Fact]
-    public void CompositorActuationBridge_DoesNotRequireConcreteGraphicsBackend()
+    public void CompositorActuationBridge_DoesNotRequireVulkanToHandleAbstractMechanism()
     {
         string coreProject = File.ReadAllText(ProjectPath("src/Aurelian.Core/Aurelian.Core.csproj"));
         string testProject = File.ReadAllText(ProjectPath("tests/Aurelian.Core.Tests/Aurelian.Core.Tests.csproj"));
         string[] sourceFiles = Directory.GetFiles(ProjectPath("src/Aurelian.Core"), "*.cs", SearchOption.AllDirectories);
         string source = string.Join('\n', sourceFiles.Select(File.ReadAllText));
 
-        Assert.DoesNotContain(GraphicsProjectName(), coreProject, StringComparison.Ordinal);
+        Assert.Contains(GraphicsProjectName(), coreProject, StringComparison.Ordinal);
         Assert.DoesNotContain(GraphicsProjectName(), testProject, StringComparison.Ordinal);
-        Assert.DoesNotContain("Vul" + "kan", source, StringComparison.Ordinal);
+        Assert.Contains("Aurelian.Rendering.Contracts", coreProject, StringComparison.Ordinal);
         Assert.DoesNotContain("Sil" + "k", source, StringComparison.Ordinal);
     }
 

@@ -278,3 +278,9 @@ A57 moves the conceptual Runtime/Graphics bridge pattern proven by A56 into prod
 `Aurelian.Core.Compositor.CompositorActuationBridge` is the handler adapter between Runtime policy acts and that abstract mechanism. It depends on Runtime only for `CompositorDispatchAct` and on Rendering.Contracts for neutral compositor DTOs. It must not depend on `Aurelian.Graphics`, Silk.NET, Vulkan, swapchains, surfaces, or concrete presentation resources in A57.
 
 A future milestone may add a production Vulkan adapter that implements the Core mechanism seam while preserving the existing rule that Runtime does not reference Graphics and Graphics does not reference Runtime/Dominatus.
+
+## A58 implementation note
+
+A58 promotes the A56 integration-test bridge into a production Core adapter. `Aurelian.Core.Graphics.Vulkan.Compositor.VulkanCompositorMechanismAdapter` implements the neutral `ICompositorMechanism` seam and delegates to the graphics-side `VulkanCompositorPassthrough` using prebuilt `VulkanPlantOutputImageSet` and `VulkanPresentationTargetImageSet` dependencies.
+
+This preserves the policy/mechanism split: Runtime/Dominatus policy emits neutral dispatch requests, Core performs engine-spine wiring, and Graphics owns Vulkan image resolution, command recording, copy submission, and backend diagnostics. A58 deliberately does not add a frame loop, host project, differential compositor, or automatic swapchain/window instantiation in Core.

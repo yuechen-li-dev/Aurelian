@@ -9,8 +9,10 @@ namespace Aurelian.Graphics.Vulkan.Compositor;
 /// </summary>
 public sealed class VulkanPresentationTargetImageSet
 {
-    internal VulkanPresentationTargetImageSet(PlantId plantId, IReadOnlyList<VulkanPresentationTargetImage> images)
+    public VulkanPresentationTargetImageSet(PlantId plantId, IReadOnlyList<VulkanPresentationTargetImage> images)
     {
+        ArgumentNullException.ThrowIfNull(images);
+
         PlantId = plantId;
         Images = images.ToArray();
     }

@@ -1,3 +1,5 @@
+using Aurelian.Core.Compositor;
+using Aurelian.Core.Graphics.Vulkan.Compositor;
 using Aurelian.Graphics.Vulkan.Commanding;
 using Aurelian.Graphics.Vulkan.Commanding.Submit;
 using Aurelian.Graphics.Vulkan.Compositor;
@@ -112,21 +114,17 @@ public sealed class RuntimeGraphicsCompositorBridgeM0Tests
                 VulkanPresentationTargetImageSet targets = swapchain.CreatePresentationTargetImageSet();
                 PresentationTargetRef target = new(init.Plant!.Context.Id.Value, acquire.ImageIndex.Value, 1);
                 CompositorPolicyFacts facts = Facts(1, output, target, PlantOutputReadinessStatus.Ready);
-                VulkanCompositorResult? dispatch = null;
-                var handler = new CapturingCompositorDispatchHandler(cmd =>
-                {
-                    dispatch = compositor.Dispatch(cmd.Request, outputs, targets);
-                    return dispatch.DispatchResult;
-                });
+                var adapter = new VulkanCompositorMechanismAdapter(compositor, outputs, targets);
+                var bridge = new CompositorActuationBridge(adapter);
+                var handler = new CapturingCompositorDispatchHandler(cmd => bridge.HandleAsync(cmd).GetAwaiter().GetResult());
                 var actuatorHost = new ActuatorHost();
                 actuatorHost.Register(handler);
 
                 CompositorPolicyResult result = await CompositorPolicySession.RunOnceAsync(facts, actuatorHost);
 
                 Assert.True(result.Success, FormatDiagnostics(result));
-                Assert.NotNull(dispatch);
-                Assert.True(dispatch.Success, FormatDiagnostics(dispatch));
-                Assert.NotNull(dispatch.SignalFenceValue);
+                Assert.NotNull(result.DispatchResult);
+                Assert.True(result.DispatchResult.Success, FormatDiagnostics(result.DispatchResult));
                 Assert.Equal(VulkanResourceLayout.Present, targets.Images[(int)acquire.ImageIndex.Value].LayoutTracker.Get(0, 0));
                 CompositorDispatchAct act = Assert.Single(handler.Acts);
                 Assert.Equal(output, Assert.Single(act.Request.Inputs));
@@ -176,8 +174,8 @@ public sealed class RuntimeGraphicsCompositorBridgeM0Tests
     private static string FormatDiagnostics(CompositorPolicyResult result)
         => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 
-    private static string FormatDiagnostics(VulkanCompositorResult result)
-        => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
+    private static string FormatDiagnostics(CompositorDispatchResult result)
+        => string.Join(Environment.NewLine, result.DispatchDiagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 
     private static string GetRepoRoot()
     {

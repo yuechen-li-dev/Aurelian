@@ -360,3 +360,9 @@ A57 establishes `Aurelian.Core` as the engine integration spine M0 rather than a
 Core remains graphics-free in A57. It must not reference `Aurelian.Graphics`, Silk.NET, Vulkan, swapchain/window/surface APIs, shader tooling, service locators, global singletons, reflection-based construction, vendor samples, or CodeReferences. Runtime remains free of Graphics, Graphics remains free of Runtime/Dominatus, and Rendering.Contracts remains a neutral DTO boundary.
 
 The production frame pump and concrete Vulkan compositor adapter are deferred. The next dependency decision should keep the Vulkan mechanism behind an Aurelian-owned adapter seam rather than letting Runtime or neutral contracts depend on backend details.
+
+## A58 dependency note — Core-to-Graphics adapter
+
+A58 intentionally allows `Aurelian.Core -> Aurelian.Graphics` because Core is now the high-level engine integration spine. This exception does not relax lower-level dependency boundaries: `Aurelian.Runtime` must remain graphics-free, `Aurelian.Graphics` must remain Runtime/Dominatus-free, and `Aurelian.Rendering.Contracts` must remain neutral.
+
+The A58 Vulkan compositor adapter depends on prebuilt graphics mechanism objects supplied by the caller. It does not act as a service locator, create global singletons, instantiate windows or swapchains, add packages, or hide frame-loop ownership inside Core.
