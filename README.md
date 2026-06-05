@@ -248,3 +248,11 @@ The A61 model is configuration/lifecycle vocabulary only. It does not create Vul
 A62 adds `samples/Aurelian.VisibleTriangle`, a small human-run sample executable for the current prepared-visible engine path. The sample creates the Vulkan presentation plant, visible swapchain/window, offscreen triangle resources, compositor passthrough mechanism, Core Vulkan compositor adapter, prepared visible graphics bundle, started `AurelianEngine`, and `AurelianFramePump` externally, then runs one frame through the Runtime compositor policy and presents the compositor output to the swapchain.
 
 The sample intentionally uses sample-local static SPIR-V fixtures and does not reference `Aurelian.Shaders`, load assets, compile shaders at runtime, render directly to the swapchain, create a continuous engine loop, add `Aurelian.Host`, or add new packages. CI should build the sample but should not run it in headless environments.
+
+## A63 — Minimal production frame loop M0
+
+Status: implemented.
+
+A63 adds a small Core-owned frame loop abstraction under `Aurelian.Core.Engine.Frames`. `AurelianFrameLoop` consumes an existing `AurelianFramePump`, obtains explicit prepared `AurelianFrameInput` values from `IAurelianFrameInputProvider`, runs finite frame-count loops by default, supports cancellation, optionally calls an abstract `IPresentationMechanism` after successful frames, and returns typed loop status, stop reason, iteration records, counters, and diagnostics.
+
+The frame loop remains orchestration-only. It does not create Vulkan plants, windows, surfaces, swapchains, compositor mechanisms, graphics resources, assets, render graphs, scheduler threads, or an `Aurelian.Host` project. The A62 visible triangle sample still uses the one-frame pump directly; converting that sample to consume the A63 loop is deferred to A64.

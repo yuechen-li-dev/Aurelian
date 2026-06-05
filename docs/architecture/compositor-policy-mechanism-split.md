@@ -335,3 +335,9 @@ A61 adds Core-side graphics subsystem vocabulary without changing the policy/mec
 A62 exercises the documented compositor policy/mechanism split from a standalone sample executable. The visible triangle sample prepares graphics resources outside Core, runs `AurelianFramePump.RunOneFrameAsync(...)` so Runtime/Dominatus policy emits the neutral compositor dispatch, routes that dispatch through `CompositorActuationBridge`, executes the Vulkan compositor passthrough mechanism through `VulkanCompositorMechanismAdapter`, and presents the compositor-produced swapchain image.
 
 The sample path is intentionally not direct swapchain rendering and not a new policy layer. It keeps the neutral contract boundary intact, uses sample-local static SPIR-V bytes rather than runtime shader compilation, and leaves continuous frame-loop ownership, differential composition, asset/shader artifact loading, and input/window abstractions deferred.
+
+## A63 Core frame loop orchestration
+
+A63 layers a minimal Core-owned frame loop above the A59 one-frame pump without changing the compositor policy/mechanism split. `AurelianFrameLoop` consumes prepared `AurelianFrameInput` instances from `IAurelianFrameInputProvider`, delegates each frame to `AurelianFramePump`, and optionally presents through the already-abstract `IPresentationMechanism` only after a successful frame.
+
+The loop remains prepared-input and prepared-mechanism based. It has no Vulkan/window/swapchain/resource creation path, does not instantiate compositor mechanisms, does not pump window events, and does not become a host or graphics lifecycle owner. Unit tests prove orchestration with fake input providers, fake compositor mechanisms, and fake presentation mechanisms; the A62 sample remains on the direct one-frame pump path until a later sample conversion milestone.

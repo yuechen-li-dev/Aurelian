@@ -391,3 +391,9 @@ M0 supports only externally owned prepared graphics. Core validates that `Prepar
 A62 adds a sample executable under `samples/Aurelian.VisibleTriangle` and does not relax production dependency boundaries. The sample references Core, Graphics, Runtime, and Rendering.Contracts to compose the already-existing prepared-visible path manually; it does not reference test projects, `Aurelian.Shaders`, `Aurelian.Assets`, `Aurelian.AssetTool`, or `Aurelian.World` directly.
 
 The only production graphics changes are a hidden-by-default `VulkanSwapchainCreateOptions.Visible` flag and a minimal `AurelianVulkanSurface.PumpEvents()` method so the sample can show and briefly service its window. Defaults remain test/headless-safe. No new packages, service locator, singleton, reflection construction path, `Aurelian.Host`, VMA/VMASharp, Vortice, CodeReferences change, or vendor modification is introduced.
+
+## A63 minimal production frame loop dependency note
+
+A63 keeps high-level frame-loop orchestration in `Aurelian.Core.Engine.Frames` while preserving prepared ownership boundaries. The new `AurelianFrameLoop` consumes an existing `AurelianFramePump`, obtains prepared frame inputs through `IAurelianFrameInputProvider`, and optionally presents through `IPresentationMechanism`; it does not allocate or create Vulkan plants, windows, surfaces, swapchains, graphics resources, compositor mechanisms, or presentation mechanisms.
+
+No dependency boundary is relaxed: `Aurelian.Runtime` remains graphics-free, `Aurelian.Graphics` remains Runtime/Dominatus-free, and `Aurelian.Rendering.Contracts` remains neutral. A63 adds no packages, `Aurelian.Host`, service locator, singleton, reflection construction path, VMA/VMASharp, Vortice, CodeReferences change, or vendor modification. The visible triangle sample conversion to the frame loop is intentionally deferred.

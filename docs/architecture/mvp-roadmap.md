@@ -370,3 +370,11 @@ Status: implemented.
 A62 adds `samples/Aurelian.VisibleTriangle` as the first standalone sample executable for the current visible engine path. It externally prepares the presentation-enabled Vulkan plant, visible swapchain/window, acquired presentation target, offscreen triangle, allocator/fence/command resources, compositor passthrough mechanism, Core Vulkan compositor adapter, and prepared visible graphics bundle. It then starts an `AurelianEngine` configured with `PreparedVisible`, creates an `AurelianFramePump`, runs one frame through the Runtime compositor policy, copies the offscreen triangle through compositor passthrough, presents the swapchain image, pumps window events briefly, and exits with diagnostics.
 
 A62 remains a minimal sample only. It does not introduce a production frame loop, editor, host project, asset loading, runtime shader compilation, world integration, render graph, differential compositor, VMA/VMASharp, Vortice, new package dependency, CodeReferences change, or vendor change. Recommended next milestone: **A63 — Minimal production frame loop M0**.
+
+## A63 — Minimal production frame loop M0
+
+Status: implemented.
+
+A63 adds the first minimal production frame loop abstraction in `Aurelian.Core.Engine.Frames`. `AurelianFrameLoop` is constructed over an existing `AurelianFramePump`, a prepared-input provider (`IAurelianFrameInputProvider`), an optional abstract `IPresentationMechanism`, and small loop options for finite max-frame execution, presentation-after-success, and stop-on-frame-failure behavior.
+
+The loop returns typed `AurelianFrameLoopResult` diagnostics with status, stop reason, attempted/completed counters, and per-iteration frame/presentation records. It supports cancellation and provider-driven completion, but deliberately does not own window event pumping, graphics lifecycle, Vulkan/window/swapchain creation, compositor mechanism creation, render graphs, asset loading, shader compilation, scheduler threads, framerate limiting, or an unbounded default loop. Recommended next milestone: **A64 — Visible triangle sample uses frame loop M0**.
