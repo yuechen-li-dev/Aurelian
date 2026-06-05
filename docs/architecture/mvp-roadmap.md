@@ -338,3 +338,11 @@ Recommended next step: A58 — Core Vulkan compositor mechanism adapter M0.
 A58 is implemented as a Core adapter milestone. `Aurelian.Core` may now reference `Aurelian.Graphics` because Core is the engine integration spine, while `Aurelian.Runtime`, `Aurelian.Graphics`, and `Aurelian.Rendering.Contracts` retain their lower-level decoupling rules.
 
 The adapter connects `ICompositorMechanism` to the prebuilt Vulkan passthrough mechanism and image sets, accepts neutral compositor dispatch requests, and returns neutral dispatch results. Frame-loop ownership, automatic window/swapchain creation, and present semaphore integration remain deferred. The recommended next milestone is **A59 — Minimal frame pump M0**.
+
+## A59 — Minimal Core frame pump M0
+
+Status: implemented.
+
+A59 establishes `Aurelian.Core.Engine.Frames` as the first high-level frame orchestration shell. The M0 pump runs exactly one logical engine frame from explicit frame facts and compositor policy facts through `CompositorPolicySession`, a per-frame Dominatus `ActuatorHost`, the Core `CompositorActuationBridge`, and an injected neutral `ICompositorMechanism`, then reports a typed `AurelianFrameResult`.
+
+This milestone intentionally remains pre-loop and pre-host: there is no continuous frame loop, no window pump, no swapchain creation, no Vulkan setup inside the pump, no render graph, no world extraction/update integration, and no `Aurelian.Host` project. A60 should build on the proven abstract one-frame pump with a Vulkan-backed visible frame pump integration M0.

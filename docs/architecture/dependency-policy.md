@@ -366,3 +366,9 @@ The production frame pump and concrete Vulkan compositor adapter are deferred. T
 A58 intentionally allows `Aurelian.Core -> Aurelian.Graphics` because Core is now the high-level engine integration spine. This exception does not relax lower-level dependency boundaries: `Aurelian.Runtime` must remain graphics-free, `Aurelian.Graphics` must remain Runtime/Dominatus-free, and `Aurelian.Rendering.Contracts` must remain neutral.
 
 The A58 Vulkan compositor adapter depends on prebuilt graphics mechanism objects supplied by the caller. It does not act as a service locator, create global singletons, instantiate windows or swapchains, add packages, or hide frame-loop ownership inside Core.
+
+## A59 frame pump dependency note
+
+A59 keeps high-level frame orchestration in `Aurelian.Core` and keeps mechanism work behind Aurelian-owned contracts. The new frame pump references the existing Runtime compositor policy shell and Dominatus actuator host only to execute one local policy tick; compositor actuation exits Core through `CompositorActuationBridge` and the neutral `ICompositorMechanism` interface.
+
+The frame pump does not introduce new packages, global services, reflection-based construction, singletons, a host project, or direct Vulkan/window/swapchain setup. `Aurelian.Runtime` remains graphics-free, `Aurelian.Graphics` remains runtime/Dominatus-free, and `Aurelian.Rendering.Contracts` remains neutral.
