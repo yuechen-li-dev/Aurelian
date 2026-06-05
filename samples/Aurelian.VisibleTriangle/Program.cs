@@ -11,7 +11,8 @@ internal static class Program
     private const int Success = 0;
     private const int EnvironmentOrRuntimeFailure = 2;
     private const int UnexpectedFailure = 3;
-    private const int SupportedFrameCount = 1;
+    private const int DefaultFrameCount = 3;
+    private const int MaximumFrameCount = 300;
 
     public static async Task<int> Main(string[] args)
     {
@@ -19,16 +20,10 @@ internal static class Program
         bool skipHold = args.Contains("--no-hold", StringComparer.OrdinalIgnoreCase);
         int frameCount = ParseFrameCount(args);
 
-        Console.WriteLine("Aurelian A66 visible triangle sample");
+        Console.WriteLine("Aurelian A67 visible triangle sample");
         Console.WriteLine("Path: prepared Vulkan setup -> AurelianEngine -> AurelianRuntimeSession -> AurelianFrameLoop -> runtime tick -> frame pump -> runtime compositor policy -> core compositor bridge -> Vulkan compositor -> present");
         Console.WriteLine($"Validation: {(enableValidation ? "enabled" : "disabled")}");
-        Console.WriteLine($"Requested frames: {frameCount}; supported M0 frames: {SupportedFrameCount}");
-
-        if (frameCount != SupportedFrameCount)
-        {
-            Console.Error.WriteLine("A66 visible triangle sample currently supports one prepared acquired swapchain image; use --frames 1. Multi-frame acquire/present is deferred.");
-            frameCount = SupportedFrameCount;
-        }
+        Console.WriteLine($"Selected finite frame count: {frameCount} (default {DefaultFrameCount}, max {MaximumFrameCount}).");
 
         VisibleTriangleSampleFrame? sample = null;
         AurelianRuntimeSession? runtimeSession = null;
@@ -36,8 +31,8 @@ internal static class Program
 
         try
         {
-            sample = VisibleTriangleSampleFrame.Create(enableValidation);
-            Console.WriteLine($"Prepared visible Vulkan setup created ({sample.SwapchainDescription}); acquired image {sample.AcquiredImageIndex}.");
+            sample = VisibleTriangleSampleFrame.Create(enableValidation, frameCount);
+            Console.WriteLine($"Prepared visible Vulkan setup created ({sample.SwapchainDescription}); swapchain images will be acquired per frame.");
             Console.WriteLine($"Engine status after start: {sample.Engine.Status}; graphics mode: {sample.Engine.Options.Graphics.Mode} ({sample.Engine.Options.Graphics.Ownership}).");
 
             runtimeSession = new AurelianRuntimeSession();
@@ -54,7 +49,7 @@ internal static class Program
 
             var runtimeTicker = new AurelianRuntimeSessionTickerAdapter(runtimeSession);
             var runtimeTickStep = new AurelianRuntimeTickFrameStep(runtimeTicker);
-            var inputProvider = new VisibleTriangleFrameInputProvider(sample.Input);
+            var inputProvider = sample.InputProvider;
             var frameLoop = new AurelianFrameLoop(
                 sample.FramePump,
                 inputProvider,
@@ -65,8 +60,9 @@ internal static class Program
                     StopOnFrameFailure: true),
                 runtimeTickStep);
 
-            AurelianFrameLoopResult loopResult = await frameLoop.RunAsync(sample.Input.FrameId).ConfigureAwait(false);
+            AurelianFrameLoopResult loopResult = await frameLoop.RunAsync(sample.StartFrameId).ConfigureAwait(false);
             PrintLoopResult(loopResult);
+            PrintSampleDiagnostics(inputProvider, sample.PresentationMechanism);
 
             if (!skipHold && loopResult.Success)
             {
@@ -83,13 +79,13 @@ internal static class Program
         }
         catch (VisibleTriangleSampleException ex)
         {
-            Console.Error.WriteLine("A66 visible triangle sample could not run in this environment or failed during the Vulkan sample path.");
+            Console.Error.WriteLine("A67 visible triangle sample could not run in this environment or failed during the Vulkan sample path.");
             Console.Error.WriteLine(ex.Message);
             return EnvironmentOrRuntimeFailure;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("A66 visible triangle sample hit an unexpected exception.");
+            Console.Error.WriteLine("A67 visible triangle sample hit an unexpected exception.");
             Console.Error.WriteLine(ex);
             return UnexpectedFailure;
         }
@@ -140,14 +136,20 @@ internal static class Program
 
             if (i + 1 >= args.Length || !int.TryParse(args[i + 1], out int value) || value <= 0)
             {
-                Console.Error.WriteLine("Invalid --frames value; defaulting to 1.");
-                return SupportedFrameCount;
+                Console.Error.WriteLine($"Invalid --frames value; defaulting to {DefaultFrameCount}. Use a positive integer up to {MaximumFrameCount}.");
+                return DefaultFrameCount;
+            }
+
+            if (value > MaximumFrameCount)
+            {
+                Console.Error.WriteLine($"Requested --frames {value} exceeds max {MaximumFrameCount}; capping to {MaximumFrameCount}.");
+                return MaximumFrameCount;
             }
 
             return value;
         }
 
-        return SupportedFrameCount;
+        return DefaultFrameCount;
     }
 
     private static void PrintLoopResult(AurelianFrameLoopResult result)
@@ -177,6 +179,30 @@ internal static class Program
             {
                 Console.WriteLine(FormatDiagnostics(iteration.FrameResult));
             }
+        }
+    }
+
+    private static void PrintSampleDiagnostics(
+        VisibleTriangleFrameInputProvider inputProvider,
+        VisibleTriangleSamplePresentationMechanism presentationMechanism)
+    {
+        if (inputProvider.Frames.Count > 0)
+        {
+            Console.WriteLine("Sample frame acquire/present state:");
+            foreach (VisibleTriangleFrameState frame in inputProvider.Frames.Values.OrderBy(static state => state.FrameId.Value))
+            {
+                Console.WriteLine($"Frame {frame.FrameId.Value}: acquired swapchain image {frame.SwapchainImageIndex}; target={frame.PresentationTarget}; output={frame.PlantOutput}.");
+            }
+        }
+
+        foreach (string diagnostic in inputProvider.Diagnostics)
+        {
+            Console.WriteLine($"Input provider diagnostic: {diagnostic}");
+        }
+
+        foreach (string diagnostic in presentationMechanism.Diagnostics)
+        {
+            Console.WriteLine($"Presentation diagnostic: {diagnostic}");
         }
     }
 

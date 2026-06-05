@@ -24,7 +24,6 @@ using Aurelian.Graphics.Vulkan.Resources.Uploads;
 using Aurelian.Graphics.Vulkan.Sync;
 using Aurelian.Rendering.Contracts.Compositor;
 using Aurelian.Rendering.Contracts.Shaders;
-using Aurelian.Runtime.Compositor;
 
 namespace Aurelian.VisibleTriangle;
 
@@ -63,10 +62,10 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         AurelianVulkanFramebuffer framebuffer,
         AurelianVulkanGraphicsPipeline pipeline,
         AurelianVulkanBuffer vertexBuffer,
-        uint acquiredImageIndex,
         AurelianEngine engine,
         AurelianFramePump framePump,
-        AurelianFrameInput input,
+        AurelianFrameId startFrameId,
+        VisibleTriangleFrameInputProvider inputProvider,
         VisibleTriangleSamplePresentationMechanism presentationMechanism)
     {
         this.plant = plant;
@@ -83,27 +82,32 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         this.framebuffer = framebuffer;
         this.pipeline = pipeline;
         this.vertexBuffer = vertexBuffer;
-        AcquiredImageIndex = acquiredImageIndex;
         Engine = engine;
         FramePump = framePump;
-        Input = input;
+        StartFrameId = startFrameId;
+        InputProvider = inputProvider;
         PresentationMechanism = presentationMechanism;
     }
-
-    public uint AcquiredImageIndex { get; }
 
     public AurelianEngine Engine { get; }
 
     public AurelianFramePump FramePump { get; }
 
-    public AurelianFrameInput Input { get; }
+    public AurelianFrameId StartFrameId { get; }
+
+    public VisibleTriangleFrameInputProvider InputProvider { get; }
 
     public VisibleTriangleSamplePresentationMechanism PresentationMechanism { get; }
 
     public string SwapchainDescription => $"{swapchain.Facts.Width}x{swapchain.Facts.Height} {swapchain.Facts.SelectedFormat} {swapchain.Facts.SelectedPresentMode}";
 
-    public static VisibleTriangleSampleFrame Create(bool enableValidation)
+    public static VisibleTriangleSampleFrame Create(bool enableValidation, int frameCount)
     {
+        if (frameCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(frameCount), "Visible triangle sample requires at least one planned frame.");
+        }
+
         VulkanInitResult init = VulkanPlantInitializer.CreatePlant(
             PlantId.Zero,
             new VulkanPlantOptions(EnableValidation: enableValidation, EnablePresentation: true));
@@ -140,15 +144,9 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
             AurelianVulkanSwapchain swapchain = swapchainResult.Swapchain!;
             try
             {
-                VulkanSwapchainAcquireResult acquire = swapchain.AcquireNextImage();
-                if (acquire.Status is not (VulkanSwapchainAcquireStatus.Acquired or VulkanSwapchainAcquireStatus.Suboptimal) || acquire.ImageIndex is null)
-                {
-                    throw new VisibleTriangleSampleException($"Swapchain image acquire failed with status {acquire.Status}: {FormatDiagnostics(acquire)}");
-                }
-
                 if (!TryMapTextureFormat(swapchain.Facts.SelectedFormat, out VulkanTextureFormat offscreenFormat))
                 {
-                    throw new VisibleTriangleSampleException($"Swapchain format '{swapchain.Facts.SelectedFormat}' is not mapped to an offscreen texture format by the A66 sample.");
+                    throw new VisibleTriangleSampleException($"Swapchain format '{swapchain.Facts.SelectedFormat}' is not mapped to an offscreen texture format by the A67 sample.");
                 }
 
                 var allocator = new RawVulkanMemoryAllocator(plant);
@@ -166,7 +164,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                 VulkanBufferUploadResult upload = uploader.Upload(new VulkanBufferUploadRequest(
                     vertexBuffer,
                     CreateTriangleVertexBytes(),
-                    DebugName: "a66.visible-triangle.vertices"));
+                    DebugName: "a67.visible-triangle.vertices"));
                 Ensure(upload.Success, $"Vertex upload failed: {FormatDiagnostics(upload)}");
 
                 VulkanFenceOperationResult uploadWait = fences.CommandListFence.WaitForValue(upload.SignalFenceValue!.Value, FenceWaitTimeoutNanoseconds);
@@ -174,14 +172,14 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
 
                 RecordAndSubmitOffscreenTriangle(plant, commandPool, submitter, renderPass, framebuffer, pipeline, vertexBuffer);
 
-                var frameId = new AurelianFrameId(66);
-                PlantOutputRef outputRef = new(plant.Context.Id.Value, frameId.Value, "triangle.offscreen");
-                VulkanPlantOutputImageSet outputs = new([new VulkanPlantOutputImage(outputRef, offscreenColor)]);
+                var startFrameId = new AurelianFrameId(67);
+                const string outputImageId = "triangle.offscreen";
+                VulkanPlantOutputImageSet outputs = CreateFinitePlantOutputImageSet(plant.Context.Id.Value, startFrameId, frameCount, outputImageId, offscreenColor);
                 VulkanPresentationTargetImageSet presentationTargets = swapchain.CreatePresentationTargetImageSet();
-                PresentationTargetRef target = new(plant.Context.Id.Value, acquire.ImageIndex.Value, frameId.Value);
-                CompositorPolicyFacts facts = Facts(frameId.Value, outputRef, target, PlantOutputReadinessStatus.Ready);
+                var pendingPresentImageIndices = new Queue<uint>();
+                var inputProvider = new VisibleTriangleFrameInputProvider(swapchain, plant.Context.Id.Value, outputImageId, pendingPresentImageIndices, frameCount);
+                var presentationMechanism = new VisibleTriangleSamplePresentationMechanism(swapchain, pendingPresentImageIndices, swapchainResult.Surface is null ? null : swapchainResult.Surface.PumpEvents);
                 var adapter = new VulkanCompositorMechanismAdapter(compositor, outputs, presentationTargets);
-                var presentationMechanism = new VisibleTriangleSamplePresentationMechanism(swapchain, acquire.ImageIndex.Value);
                 var preparedGraphics = new AurelianPreparedGraphicsSubsystem(
                     AurelianEngineGraphicsOptions.PreparedVisible,
                     adapter,
@@ -197,7 +195,6 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                 Ensure(engineStart.Success, $"Engine start failed: {FormatDiagnostics(engineStart)}");
 
                 var framePump = new AurelianFramePump(engine, bridge);
-                var input = new AurelianFrameInput(frameId, facts);
 
                 return new VisibleTriangleSampleFrame(
                     plant,
@@ -214,10 +211,10 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                     framebuffer,
                     pipeline,
                     vertexBuffer,
-                    acquire.ImageIndex.Value,
                     engine,
                     framePump,
-                    input,
+                    startFrameId,
+                    inputProvider,
                     presentationMechanism);
             }
             catch
@@ -266,19 +263,22 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         plant.Dispose();
     }
 
-    private static CompositorPolicyFacts Facts(
-        ulong frameId,
-        PlantOutputRef output,
-        PresentationTargetRef target,
-        PlantOutputReadinessStatus status)
+    private static VulkanPlantOutputImageSet CreateFinitePlantOutputImageSet(
+        uint plantId,
+        AurelianFrameId startFrameId,
+        int frameCount,
+        string outputImageId,
+        AurelianVulkanTexture offscreenColor)
     {
-        var readiness = new PlantOutputReadiness(
-            output,
-            status,
-            CompletedFenceValue: status is PlantOutputReadinessStatus.Ready or PlantOutputReadinessStatus.Reused ? frameId : null);
-        var frameFacts = new CompositorFrameFacts(frameId, [readiness], CompositorDiagnostics.Empty);
-        var required = new RequiredPlantOutputSet(frameId, CompositorPolicyKind.Passthrough, [output]);
-        return new CompositorPolicyFacts(frameFacts, required, target, CompositorPolicyKind.Passthrough);
+        var outputs = new List<VulkanPlantOutputImage>(frameCount);
+        AurelianFrameId frameId = startFrameId;
+        for (int i = 0; i < frameCount; i++)
+        {
+            outputs.Add(new VulkanPlantOutputImage(new PlantOutputRef(plantId, frameId.Value, outputImageId), offscreenColor));
+            frameId = frameId.Next();
+        }
+
+        return new VulkanPlantOutputImageSet(outputs);
     }
 
     private static AurelianVulkanTexture CreateOffscreenColorTarget(
