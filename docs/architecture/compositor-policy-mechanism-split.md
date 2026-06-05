@@ -302,3 +302,24 @@ Core frame input/facts
 ```
 
 The pump does not call Vulkan APIs, create windows, create swapchains, or allocate graphics resources. Vulkan remains behind the existing Core adapter and `Aurelian.Graphics` mechanism implementation, while A59 unit tests prove the frame pump against a fake `ICompositorMechanism`.
+
+## A60 visible frame pump integration
+
+A60 connects the A59 one-frame pump to the A58 Vulkan mechanism adapter in an integration test without changing the policy/mechanism split. The visible setup remains outside the frame pump: the test harness owns presentation-enabled plant creation, swapchain/image acquisition, offscreen triangle rendering, graphics resource lifetimes, the passthrough compositor, the Core Vulkan adapter, and final present.
+
+The exercised chain is:
+
+```text
+external Vulkan setup
+  -> visible offscreen triangle source
+  -> VulkanCompositorMechanismAdapter
+  -> AurelianFramePump.RunOneFrameAsync(...)
+  -> Runtime CompositorPolicySession
+  -> Dominatus CompositorDispatchAct
+  -> Core CompositorActuationBridge
+  -> Graphics VulkanCompositorPassthrough
+  -> swapchain target copy
+  -> test-owned present
+```
+
+This keeps Runtime policy free of Graphics, keeps Graphics free of Runtime/Dominatus, and keeps the frame pump free of Vulkan/window/swapchain ownership. Continuous frame loops, host objects, and engine graphics subsystem lifecycle policy remain future work.
