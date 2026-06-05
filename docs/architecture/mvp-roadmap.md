@@ -324,3 +324,11 @@ Status: implemented in integration tests.
 A56 adds `tests/Aurelian.Integration.Tests` as the allowed composition layer for runtime policy and graphics mechanism proofs. The integration suite covers a fake Dominatus actuator path that captures the neutral passthrough request and a real Vulkan handler path that calls the A53 `VulkanCompositorPassthrough` mechanism when plant, swapchain, acquire, and texture setup are available. Headless or unavailable Vulkan/presentation environments return diagnostics and exit cleanly rather than failing the normal test run.
 
 A56 does not create a production host project, frame loop, sample executable, differential policy, multi-GPU path, present-semaphore integration, VMA/Vortice dependency, or new production project edge. The next recommended milestone is **A57 — Minimal graphics host/frame pump M0**, because the test bridge has proven the policy-to-mechanism seam and the remaining decision is the production host shape.
+
+## A57 — Core engine integration spine M0
+
+A57 promotes `Aurelian.Core` to the engine integration spine M0. The project is now the high-level engine identity and integration layer for Dominatus-oriented orchestration, while `Aurelian.Runtime` remains the reusable policy-session/runtime-utility layer, `Aurelian.Graphics` remains the Vulkan mechanism layer, and `Aurelian.Rendering.Contracts` remains neutral DTO contracts.
+
+The M0 implementation adds a small `AurelianEngine` lifecycle shell and a neutral compositor actuation bridge. The bridge accepts Runtime `CompositorDispatchAct` values and forwards their neutral `CompositorDispatchRequest` payloads to an abstract Core `ICompositorMechanism`; it does not create a frame loop, instantiate Vulkan, or add a Graphics dependency to Core. No `Aurelian.Host` project is introduced.
+
+Recommended next step: A58 — Core Vulkan compositor mechanism adapter M0.

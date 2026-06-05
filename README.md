@@ -55,7 +55,7 @@ A1 vendors the minimal Dominatus source needed for the runtime smoke under:
 vendor/Dominatus/
 ```
 
-`Aurelian.slnx` links build modules from `vendor/Dominatus/src/`: `Dominatus.Core`, `Dominatus.OptFlow`, `Ariadne.OptFlow`, and `Dominatus.UtilityLite`. `Aurelian.Runtime` references `Dominatus.Core` for the existing smoke harness; no Aurelian production project references the new A24b modules yet, and `Aurelian.Core` remains Dominatus-free.
+`Aurelian.slnx` links build modules from `vendor/Dominatus/src/`: `Dominatus.Core`, `Dominatus.OptFlow`, `Ariadne.OptFlow`, and `Dominatus.UtilityLite`. `Aurelian.Runtime` references `Dominatus.Core` for the existing smoke harness and compositor policy session. As of A57, `Aurelian.Core` references `Aurelian.Runtime` as the engine integration spine, but it still does not create a Dominatus world in the engine lifecycle shell.
 
 A24b also vendors reference-only samples for Codex authors under `vendor/Dominatus/samples/`: `Ariadne.Console`, `Dominatus.Fishtank`, `Dominatus.TinyTown`, and `Dominatus.RTSBenchmark`. These samples are not linked in `Aurelian.slnx`, are not production dependencies, and should remain reference material only.
 
@@ -208,3 +208,9 @@ The session proves the policy/mechanism split without calling graphics code: tes
 A56 proves the runtime compositor policy can be composed with both a fake integration actuator and the real Vulkan compositor mechanism from an integration test project. The bridge lives only under `tests/Aurelian.Integration.Tests`: the fake test verifies the Dominatus act path emits the expected neutral passthrough request, and the Vulkan test registers an integration-layer handler that calls `VulkanCompositorPassthrough` when presentation is available while remaining headless-safe.
 
 This is deliberately not a production host, frame loop, sample executable, or renderer facade. `Aurelian.Runtime` remains free of `Aurelian.Graphics`; `Aurelian.Graphics` remains free of runtime policy and Dominatus; `Aurelian.Rendering.Contracts` remains neutral. Production host/frame-pump shape is deferred to a later milestone.
+
+## A57 — Aurelian.Core engine integration spine M0
+
+A57 promotes `Aurelian.Core` to the high-level Aurelian Engine integration spine instead of creating an `Aurelian.Host` project. Core now owns the engine identity/lifecycle shell and the neutral compositor mechanism bridge seam that can connect Runtime `CompositorDispatchAct` values to a future compositor mechanism implementation.
+
+The A57 Core bridge remains graphics-free: `Aurelian.Core` references `Aurelian.Runtime` and `Aurelian.Rendering.Contracts`, but does not reference `Aurelian.Graphics` or instantiate Vulkan. A production frame pump, Vulkan compositor adapter, visible sample executable, and differential compositor remain deferred.
