@@ -346,3 +346,9 @@ The proof is intentionally not a renderer facade and not a frame loop. Runtime/D
 The A55 runtime compositor policy keeps the dependency direction explicit: `Aurelian.Runtime` may reference Dominatus and `Aurelian.Rendering.Contracts` to decide and emit compositor acts, while the neutral contracts do not reference Dominatus and `Aurelian.Graphics` does not reference runtime policy. `CompositorDispatchAct` is runtime-local and wraps a neutral request; tests complete it with a fake actuator rather than a graphics or Vulkan bridge.
 
 The bridge from runtime acts to graphics compositor mechanism is intentionally deferred to A56, so A55 adds no new package dependency, no graphics reference in runtime, no Vulkan handles in policy state, no service locator, and no global compositor singleton.
+
+## A56 compositor bridge dependency note
+
+A56 uses an integration test project as the only place where runtime compositor policy and graphics compositor mechanism are composed. This is an allowed test-only dependency boundary: `tests/Aurelian.Integration.Tests` references runtime, graphics, and rendering contracts to prove the seam without adding a production bridge assembly.
+
+Production dependency policy remains unchanged. `Aurelian.Runtime` may use Dominatus and neutral rendering contracts but must not reference `Aurelian.Graphics`; `Aurelian.Graphics` may use neutral rendering contracts and Silk.NET Vulkan plumbing but must not reference runtime policy or Dominatus; `Aurelian.Rendering.Contracts` stays neutral. A production host/frame pump is explicitly deferred rather than hidden behind service locators, global singletons, reflection, or new package dependencies.

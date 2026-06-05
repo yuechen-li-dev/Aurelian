@@ -202,3 +202,9 @@ The visible path intentionally goes through compositor passthrough instead of re
 A55 adds the first runtime compositor policy session under `Aurelian.Runtime.Compositor`. The policy consumes neutral compositor contracts from `Aurelian.Rendering.Contracts.Compositor`, supports only passthrough M0 readiness decisions, and emits a runtime-only Dominatus `CompositorDispatchAct` carrying a neutral `CompositorDispatchRequest` when the required plant output is ready or reusable.
 
 The session proves the policy/mechanism split without calling graphics code: tests use a fake Dominatus actuator to complete neutral `CompositorDispatchResult` payloads, while pending outputs wait and unsupported differential/full-quality/reduced-frequency policy requests are rejected for M0. No Vulkan, swapchain, graphics actuator bridge, frame loop, differential rendering, shader compiler dependency, or `Aurelian.Graphics` reference is added to runtime.
+
+## A56 runtime/graphics compositor integration-test bridge note
+
+A56 proves the runtime compositor policy can be composed with both a fake integration actuator and the real Vulkan compositor mechanism from an integration test project. The bridge lives only under `tests/Aurelian.Integration.Tests`: the fake test verifies the Dominatus act path emits the expected neutral passthrough request, and the Vulkan test registers an integration-layer handler that calls `VulkanCompositorPassthrough` when presentation is available while remaining headless-safe.
+
+This is deliberately not a production host, frame loop, sample executable, or renderer facade. `Aurelian.Runtime` remains free of `Aurelian.Graphics`; `Aurelian.Graphics` remains free of runtime policy and Dominatus; `Aurelian.Rendering.Contracts` remains neutral. Production host/frame-pump shape is deferred to a later milestone.

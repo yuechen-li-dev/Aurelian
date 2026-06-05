@@ -316,3 +316,11 @@ The visible path deliberately uses compositor passthrough instead of direct rend
 A55 implements the first runtime compositor policy session in `Aurelian.Runtime.Compositor`. The M0 policy maps `CompositorFrameFacts`, `RequiredPlantOutputSet`, and `PresentationTargetRef` into a pure passthrough `CompositorPolicyDecision`; when required outputs are ready or reusable it emits a Dominatus `CompositorDispatchAct` that wraps a neutral `CompositorDispatchRequest`.
 
 The implementation remains runtime-policy-only. Tests register a fake compositor actuator with Dominatus `ActuatorHost`, capture the emitted act, and complete a neutral `CompositorDispatchResult`; no Vulkan calls, graphics resources, swapchains, surfaces, frame loop, differential cadence, multi-GPU transfer, or graphics actuator bridge are introduced. Recommended next milestone: **A56 — Runtime/Graphics compositor actuator bridge M0**.
+
+## A56 — Runtime/Graphics compositor integration-test bridge M0
+
+Status: implemented in integration tests.
+
+A56 adds `tests/Aurelian.Integration.Tests` as the allowed composition layer for runtime policy and graphics mechanism proofs. The integration suite covers a fake Dominatus actuator path that captures the neutral passthrough request and a real Vulkan handler path that calls the A53 `VulkanCompositorPassthrough` mechanism when plant, swapchain, acquire, and texture setup are available. Headless or unavailable Vulkan/presentation environments return diagnostics and exit cleanly rather than failing the normal test run.
+
+A56 does not create a production host project, frame loop, sample executable, differential policy, multi-GPU path, present-semaphore integration, VMA/Vortice dependency, or new production project edge. The next recommended milestone is **A57 — Minimal graphics host/frame pump M0**, because the test bridge has proven the policy-to-mechanism seam and the remaining decision is the production host shape.
