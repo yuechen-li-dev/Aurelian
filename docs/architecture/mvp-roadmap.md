@@ -354,3 +354,11 @@ Status: implemented.
 A60 proves the full externally-prepared visible path: presentation-enabled Vulkan setup draws the checked-in-SPIR-V offscreen triangle, wraps that output in the Core `VulkanCompositorMechanismAdapter`, runs `AurelianFramePump.RunOneFrameAsync(...)`, lets Runtime/Dominatus emit `CompositorDispatchAct`, routes through `CompositorActuationBridge`, invokes graphics `VulkanCompositorPassthrough`, transitions/copies into the acquired swapchain image, and presents from the test harness.
 
 The implementation is integration-test proof only. Core's frame pump still consumes explicit `AurelianFrameInput` and an injected bridge/mechanism; it owns no Vulkan/window/swapchain/texture/command setup and does not introduce a continuous frame loop, production host, `Aurelian.Host`, render graph, scheduler, asset integration, or shader compiler dependency in Graphics. Recommended next milestone: **A61 — Engine graphics subsystem options M0**.
+
+## A61 — Engine graphics subsystem options M0
+
+Status: implemented.
+
+A61 adds `Aurelian.Core.Engine.Graphics` as the Core-side options and lifecycle vocabulary for prepared graphics subsystem ownership. The M0 model supports `Headless` and `PreparedVisible` graphics modes, only `External` ownership, a prepared subsystem bundle over neutral `ICompositorMechanism` and `IPresentationMechanism` seams, and typed validation status/diagnostics.
+
+`AurelianEngineOptions` now carries normalized graphics options, defaulting null graphics configuration to `Headless`. The milestone remains options/configuration only: Core does not instantiate Vulkan plants/devices/windows/swapchains, does not move A60 integration setup into production, and does not add a frame loop, sample executable, host project, package, service locator, singleton, or reflection construction path. Recommended next milestone: **A62 — Minimal visible triangle sample executable**.

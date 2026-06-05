@@ -323,3 +323,9 @@ external Vulkan setup
 ```
 
 This keeps Runtime policy free of Graphics, keeps Graphics free of Runtime/Dominatus, and keeps the frame pump free of Vulkan/window/swapchain ownership. Continuous frame loops, host objects, and engine graphics subsystem lifecycle policy remain future work.
+
+## A61 prepared graphics subsystem options
+
+A61 adds Core-side graphics subsystem vocabulary without changing the policy/mechanism split. `AurelianEngineGraphicsOptions` records whether the engine is `Headless` or `PreparedVisible`, and M0 only supports `External` ownership so callers remain responsible for creating and disposing any Vulkan/window/swapchain resources.
+
+`AurelianPreparedGraphicsSubsystem` groups the neutral compositor mechanism with an optional-for-headless, required-for-prepared-visible presentation mechanism. Validation reports typed Core diagnostics for missing options, missing prepared mechanisms, unsupported ownership, and presentation supplied to headless mode. The frame pump still consumes the existing bridge/mechanism path and does not create graphics resources; future visible loops/samples should pass through this explicit prepared-subsystem vocabulary instead of embedding host policy in the pump.

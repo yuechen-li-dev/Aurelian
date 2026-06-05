@@ -378,3 +378,10 @@ The frame pump does not introduce new packages, global services, reflection-base
 A60 validates the allowed Core-to-Graphics adapter exception in the real visible compositor path, but only through the integration test project. The production frame pump continues to depend on prepared `AurelianFrameInput`, `CompositorActuationBridge`, and `ICompositorMechanism`; it does not allocate or create Vulkan plants, windows, surfaces, swapchains, textures, command pools, graphics resources, or compositor mechanisms.
 
 No production dependency boundaries are relaxed: `Aurelian.Runtime` remains graphics-free, `Aurelian.Graphics` remains Runtime/Dominatus-free, `Aurelian.Rendering.Contracts` remains neutral, no `Aurelian.Host` project is added, and no new package, service locator, singleton, reflection construction path, VMA/VMASharp, Vortice, CodeReferences, or vendor modification is introduced.
+
+
+## A61 engine graphics subsystem options dependency note
+
+A61 keeps Core graphics lifecycle policy explicit while preserving the A58 Core-to-Graphics adapter exception. The new `Aurelian.Core.Engine.Graphics` namespace contains generic options, ownership, prepared subsystem, presentation mechanism, result, and diagnostic vocabulary; it contains no Vulkan, Silk.NET, surface, swapchain, or native handle types.
+
+M0 supports only externally owned prepared graphics. Core validates that `PreparedVisible` bundles provide prepared compositor and presentation mechanisms, but it does not create or dispose Vulkan plants, devices, windows, swapchains, command pools, graphics resources, or presentation objects. No `Aurelian.Host`, package, service locator, singleton, reflection construction path, CodeReferences change, or vendor modification is introduced.
