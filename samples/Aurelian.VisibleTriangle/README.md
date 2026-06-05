@@ -1,9 +1,10 @@
 # Aurelian Visible Triangle sample
 
-This A68 sample executable demonstrates the current prepared-visible Aurelian engine spine across a small finite set of visible frames:
+This A69 sample executable demonstrates the current prepared-visible Aurelian engine spine across a small finite set of visible frames:
 
 ```text
 sample-owned prepared Vulkan setup
+  -> Aurelian.Assets shader artifact load (`Assets/Shaders/SmokeTriangle/shader.toml` + text `.spv.hex`)
   -> AurelianEngine
   -> AurelianRuntimeSession
   -> AurelianFrameLoop
@@ -32,7 +33,7 @@ Optional flags:
 
 ## Expected behavior
 
-When Vulkan presentation and a windowing environment are available, the sample opens a small window titled **Aurelian Visible Triangle**, renders a static triangle once to an offscreen Vulkan color target, starts `AurelianEngine`, starts a Dominatus-backed `AurelianRuntimeSession`, and runs `AurelianFrameLoop` for the selected finite frame count.
+When Vulkan presentation and a windowing environment are available, the sample opens a small window titled **Aurelian Visible Triangle**, loads a checked-in TOML + SPIR-V shader artifact through `Aurelian.Assets`, renders a static triangle once to an offscreen Vulkan color target, starts `AurelianEngine`, starts a Dominatus-backed `AurelianRuntimeSession`, and runs `AurelianFrameLoop` for the selected finite frame count.
 
 For each frame, the sample-local input provider first pumps the owned window's platform events, checks whether close was requested, and stops by returning `null` if the user has closed the window. Otherwise it acquires a fresh swapchain image, creates a frame-specific `PresentationTargetRef`, creates frame-specific `AurelianFrameInput`, and records sample diagnostics. The runtime tick and compositor policy run each frame; the Core bridge dispatches the Vulkan compositor passthrough each frame; the sample-local presentation mechanism then presents the exact image index acquired for that completed frame and pumps window events again after presentation.
 
@@ -44,6 +45,6 @@ If Vulkan, presentation, or the windowing platform is unavailable, the sample pr
 
 ## Boundaries
 
-The sample deliberately does **not** implement an infinite game loop, editor host, `Aurelian.Host`, production input system, engine-owned window lifecycle, asset loading, world integration, render graph, scheduler/threading system, differential compositor, runtime shader compilation, or a runtime DXC/SDSL dependency. The triangle shaders are tiny static SPIR-V byte fixtures copied into the sample so the executable can exercise the Vulkan compositor path without depending on test projects or shader tooling.
+The sample deliberately does **not** implement an infinite game loop, editor host, `Aurelian.Host`, production input system, engine-owned window lifecycle, full asset manager, world integration, render graph, scheduler/threading system, differential compositor, runtime shader compilation, or a runtime DXC/SDSL dependency. The triangle shaders are checked in as the A69 primary artifact shape: TOML metadata (`shader.toml`), text-safe `VSMain.spv.hex`/`PSMain.spv.hex` files decoded by `Aurelian.Assets` into raw SPIR-V bytes, and optional debug `generated.hlsl`. C# SPIR-V byte arrays are fixture/bootstrap-only and are no longer used by the sample runtime path.
 
 The sample still owns Vulkan/window/swapchain setup externally and passes prepared resources into Core. Core frame loop and frame pump remain free of Vulkan/window/swapchain creation.

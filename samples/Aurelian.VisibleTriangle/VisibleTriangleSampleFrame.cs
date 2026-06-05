@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using Aurelian.Assets.Shaders;
 using Aurelian.Core.Compositor;
 using Aurelian.Core.Engine;
 using Aurelian.Core.Engine.Frames;
@@ -164,7 +164,8 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                 AurelianVulkanTexture offscreenColor = CreateOffscreenColorTarget(plant, allocator, swapchain, offscreenFormat);
                 AurelianVulkanRenderPass renderPass = CreateRenderPass(plant, offscreenFormat);
                 AurelianVulkanFramebuffer framebuffer = CreateFramebuffer(plant, renderPass, offscreenColor, swapchain);
-                AurelianVulkanGraphicsPipeline pipeline = CreatePipeline(plant, renderPass);
+                CompiledShaderProgram shaderProgram = LoadTriangleCompiledShaderProgram();
+                AurelianVulkanGraphicsPipeline pipeline = CreatePipeline(plant, renderPass, shaderProgram);
                 AurelianVulkanBuffer vertexBuffer = CreateVertexBuffer(plant, allocator);
 
                 VulkanBufferUploadResult upload = uploader.Upload(new VulkanBufferUploadRequest(
@@ -345,12 +346,15 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         return result.Framebuffer!;
     }
 
-    private static AurelianVulkanGraphicsPipeline CreatePipeline(AurelianVulkanPlant plant, AurelianVulkanRenderPass renderPass)
+    private static AurelianVulkanGraphicsPipeline CreatePipeline(
+        AurelianVulkanPlant plant,
+        AurelianVulkanRenderPass renderPass,
+        CompiledShaderProgram shaderProgram)
     {
         VulkanCompiledGraphicsPipelineCreateResult result = VulkanCompiledGraphicsPipelineDescriptorFactory.CreatePipeline(
             plant,
             renderPass,
-            CreateTriangleCompiledShaderProgram(),
+            shaderProgram,
             [new VulkanVertexBufferLayoutDescriptor(Binding: 0, Stride: 24)],
             [
                 new VulkanVertexAttributeDescriptor(Location: 0, Binding: 0, VulkanVertexAttributeFormat.Float2, Offset: 0),
@@ -424,25 +428,19 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         Ensure(submit.Success, $"Offscreen triangle submit failed: {FormatDiagnostics(submit)}");
     }
 
-    private static CompiledShaderProgram CreateTriangleCompiledShaderProgram()
-        => new(
-            CompiledShaderProgram.CurrentFormatVersion,
-            [
-                new CompiledShaderStage(
-                    CompiledShaderStageKind.Vertex,
-                    TriangleSpirvFixtures.VertexEntryPoint,
-                    TriangleSpirvFixtures.VertexProfile,
-                    TriangleSpirvFixtures.VertexBytes,
-                    Sha256(TriangleSpirvFixtures.VertexBytes),
-                    TriangleSpirvFixtures.VertexSourceName),
-                new CompiledShaderStage(
-                    CompiledShaderStageKind.Fragment,
-                    TriangleSpirvFixtures.FragmentEntryPoint,
-                    TriangleSpirvFixtures.FragmentProfile,
-                    TriangleSpirvFixtures.FragmentBytes,
-                    Sha256(TriangleSpirvFixtures.FragmentBytes),
-                    TriangleSpirvFixtures.FragmentSourceName),
-            ]);
+    private static CompiledShaderProgram LoadTriangleCompiledShaderProgram()
+    {
+        string manifestPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "Shaders",
+            "SmokeTriangle",
+            "shader.toml");
+
+        ShaderArtifactLoadResult result = ShaderArtifactLoader.LoadCompiledShaderProgram(manifestPath);
+        Ensure(result.Success, $"Shader artifact loading failed: {FormatDiagnostics(result)}");
+        return result.Program!;
+    }
 
     private static byte[] CreateTriangleVertexBytes()
     {
@@ -480,7 +478,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         }
     }
 
-    private static string Sha256(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+    private static string FormatDiagnostics(ShaderArtifactLoadResult result) => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 
     private static string FormatDiagnostics(VulkanInitResult result) => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 

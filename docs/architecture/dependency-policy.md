@@ -430,3 +430,24 @@ The dependency boundaries remain unchanged: Runtime stays graphics-free, Graphic
 A68 uses the existing Silk.NET Windowing dependency only inside the Vulkan presentation owner and the visible sample. `AurelianVulkanSurface` exposes a narrow close-status property for its owned window in addition to its existing event pump; it does not expose raw `IWindow`, keyboard devices, or a general input abstraction. The sample keeps close handling in `samples/Aurelian.VisibleTriangle` through `VisibleTriangleWindowState`, and Core/Runtime continue to receive only frame input/provider and presentation contracts.
 
 The dependency boundary remains unchanged: no new package references, no production host/window lifecycle, no service locator or singleton, no runtime shader compiler dependency, and no graphics dependency on `Aurelian.Shaders` or asset tooling.
+
+## A69 shader artifact file bridge policy
+
+A69 establishes the primary runtime shader artifact shape as TOML metadata plus external SPIR-V byte files and optional generated/debug HLSL. Generated build artifacts may use raw `.spv`; checked-in sample artifacts use A69b text-safe `.spv.hex` transport files:
+
+```text
+shader.toml
+VSMain.spv.hex
+PSMain.spv.hex
+generated.hlsl
+```
+
+Responsibilities remain layered:
+
+- `Aurelian.Shaders` owns shader compiler/tooling emission and may write artifact files from successful compiler artifacts.
+- `Aurelian.Assets` may parse TOML shader artifact manifests and load hash-checked SPIR-V bytes into neutral `CompiledShaderProgram` contracts. `spirv_encoding = "binary"` reads raw bytes, and `spirv_encoding = "hex"` decodes text hex before hashing.
+- `Aurelian.Rendering.Contracts` owns the neutral compiled shader DTOs.
+- `Aurelian.Graphics` consumes `CompiledShaderProgram` only and must not reference `Aurelian.Shaders`, `Aurelian.Assets`, DXC, SDSL-V compiler code, or shader artifact writer/loader code.
+- Samples may load checked-in artifact files through `Aurelian.Assets`, but must not compile SDSL-V/HLSL at runtime or depend on `Aurelian.Shaders` for the runtime path.
+
+C# SPIR-V byte arrays are fixture/bootstrap-only and are not the primary runtime artifact format. `spirv_sha256` is always computed over decoded/raw SPIR-V bytes, not over hex transport text.
