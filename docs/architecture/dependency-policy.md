@@ -405,3 +405,9 @@ A64 makes the preferred `Aurelian.Runtime` tick path explicitly Dominatus-backed
 `Aurelian.Core` remains the engine integration spine and may call a runtime session from a future frame-loop bridge. `Aurelian.Graphics` remains mechanism-only and is not referenced by Runtime. World/render extraction and graphics submission remain deferred seams outside the A64 runtime tick.
 
 The inspected `ParallelAiWorldRunner` currently belongs to vendored `Dominatus.Core` as a staged parallel agent runner for one `AiWorld`. A64 leaves it there and exposes `IAurelianAiWorldRunner` so Runtime can adopt a deliberate adapter later without moving vendor code or creating dependency cycles.
+
+## A65 Core/runtime seam note
+
+A65 adds a narrow Core-owned runtime ticker seam for frame orchestration. Core may depend on Runtime session DTOs/results because Core owns high-level engine/frame orchestration, but Runtime must not depend back on Core. The real `AurelianRuntimeSession` path is connected by a Core-side adapter, preserving the dependency direction and avoiding a project cycle.
+
+The seam is intentionally not a service locator, singleton, reflection hook, graphics bridge, or renderer abstraction. It only lets the frame loop tick a prepared runtime session before the existing frame pump. Runtime remains graphics-free; Graphics remains runtime/Dominatus-free; Rendering.Contracts remains neutral.

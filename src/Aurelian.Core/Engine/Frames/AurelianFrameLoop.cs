@@ -1,4 +1,5 @@
 using Aurelian.Core.Engine.Graphics;
+using Aurelian.Core.Engine.Runtime;
 
 namespace Aurelian.Core.Engine.Frames;
 
@@ -8,17 +9,20 @@ public sealed class AurelianFrameLoop
     private readonly IAurelianFrameInputProvider? inputProvider;
     private readonly IPresentationMechanism? presentationMechanism;
     private readonly AurelianFrameLoopOptions options;
+    private readonly AurelianRuntimeTickFrameStep? runtimeTickStep;
 
     public AurelianFrameLoop(
         AurelianFramePump framePump,
         IAurelianFrameInputProvider inputProvider,
         IPresentationMechanism? presentationMechanism = null,
-        AurelianFrameLoopOptions? options = null)
+        AurelianFrameLoopOptions? options = null,
+        AurelianRuntimeTickFrameStep? runtimeTickStep = null)
     {
         this.framePump = framePump;
         this.inputProvider = inputProvider;
         this.presentationMechanism = presentationMechanism;
         this.options = options ?? new AurelianFrameLoopOptions();
+        this.runtimeTickStep = runtimeTickStep;
     }
 
     public async Task<AurelianFrameLoopResult> RunAsync(
@@ -77,6 +81,31 @@ public sealed class AurelianFrameLoop
 
                 framesAttempted++;
 
+                AurelianRuntimeTickFrameStepResult? runtimeTickResult = null;
+                if (runtimeTickStep is not null)
+                {
+                    runtimeTickResult = await runtimeTickStep
+                        .RunAsync(input.FrameId, options.RuntimeDeltaTime, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    if (!runtimeTickResult.Success)
+                    {
+                        diagnostics.Add(MapRuntimeTickDiagnostic(runtimeTickResult));
+
+                        return Result(
+                            runtimeTickResult.Status == AurelianRuntimeTickFrameStepStatus.Cancelled
+                                ? AurelianFrameLoopStatus.Cancelled
+                                : AurelianFrameLoopStatus.Failed,
+                            runtimeTickResult.Status == AurelianRuntimeTickFrameStepStatus.Cancelled
+                                ? AurelianFrameLoopStopReason.Cancelled
+                                : AurelianFrameLoopStopReason.FrameFailed,
+                            framesAttempted,
+                            framesCompleted,
+                            iterations,
+                            diagnostics);
+                    }
+                }
+
                 AurelianFrameResult frameResult = await framePump!
                     .RunOneFrameAsync(input, cancellationToken)
                     .ConfigureAwait(false);
@@ -115,7 +144,7 @@ public sealed class AurelianFrameLoop
                     }
                 }
 
-                iterations.Add(new AurelianFrameLoopIterationResult(input.FrameId, frameResult, presented));
+                iterations.Add(new AurelianFrameLoopIterationResult(input.FrameId, runtimeTickResult, frameResult, presented));
 
                 if (!frameResult.Success)
                 {
@@ -203,6 +232,28 @@ public sealed class AurelianFrameLoop
         }
 
         return null;
+    }
+
+    private static AurelianFrameLoopDiagnostic MapRuntimeTickDiagnostic(AurelianRuntimeTickFrameStepResult runtimeTickResult)
+    {
+        string code = runtimeTickResult.Status switch
+        {
+            AurelianRuntimeTickFrameStepStatus.Rejected => AurelianFrameLoopDiagnosticCodes.RuntimeTickRejected,
+            AurelianRuntimeTickFrameStepStatus.Cancelled => AurelianFrameLoopDiagnosticCodes.RuntimeTickCancelled,
+            _ => AurelianFrameLoopDiagnosticCodes.RuntimeTickFailed,
+        };
+
+        AurelianFrameLoopDiagnosticSeverity severity = runtimeTickResult.Status == AurelianRuntimeTickFrameStepStatus.Cancelled
+            ? AurelianFrameLoopDiagnosticSeverity.Warning
+            : AurelianFrameLoopDiagnosticSeverity.Error;
+        string detail = runtimeTickResult.Diagnostics.Count > 0
+            ? string.Join("; ", runtimeTickResult.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"))
+            : $"Runtime tick frame step ended with status {runtimeTickResult.Status}.";
+
+        return new AurelianFrameLoopDiagnostic(
+            code,
+            severity,
+            $"Frame {runtimeTickResult.FrameId} runtime tick did not complete successfully: {detail}");
     }
 
     private static AurelianFrameLoopResult Result(

@@ -386,3 +386,9 @@ A64 implements `Aurelian.Runtime.Sessions.AurelianRuntimeSession` as the preferr
 A64 does not implement full simulation, render extraction, graphics submission, or a frame-loop bridge. Core remains the engine integration spine and should be the next layer to call the runtime session from the A63 frame loop. Graphics remains mechanism-only and Runtime remains graphics-free.
 
 `ParallelAiWorldRunner` was inspected in vendored `Dominatus.Core`. It is a staged parallel agent runner for one `AiWorld`, with cancellation, aggregate fault handling, and write-conflict policy. A64 defers a Runtime adapter until multi-agent/world tick M1 and ships the sequential `IAurelianAiWorldRunner` implementation for M0.
+
+## A65 — Core frame loop calls runtime session M0
+
+A65 is implemented as the Core-owned frame-loop/runtime-session connection. `AurelianFrameLoop` can run an optional `AurelianRuntimeTickFrameStep` after frame input is acquired and before `AurelianFramePump.RunOneFrameAsync(...)`. The step calls a small `IAurelianRuntimeTicker` seam, and the real session path is supplied through `AurelianRuntimeSessionTickerAdapter` so Runtime does not need to reference Core.
+
+This milestone does not add world simulation, render extraction, processor systems, window/swapchain creation, or parallel runtime runner integration. Runtime remains graphics-free, Graphics remains runtime/Dominatus-free, and `ParallelAiWorldRunner` remains deferred behind the runtime runner seam.

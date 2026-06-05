@@ -417,3 +417,9 @@ This path proves the data flow while preserving the no-GPU, no-window, no-assets
 A64 adds `AurelianRuntimeSession` as the preferred runtime tick path. The session is intentionally Dominatus-shaped: tick facts are written to a runtime agent blackboard, a Dominatus HFSM node emits a neutral `AurelianRuntimeTickAct`, actuation completion is observed through Dominatus events, and typed runtime diagnostics report lifecycle, validation, cancellation, runner, and actuation failures.
 
 This reinforces the world doctrine boundary: world data remains world-owned, Dominatus owns behavior orchestration, actuators remain the seam for side effects, and Runtime does not become a global world/render/graphics processor. Render extraction, graphics submission, and real world mutation acts are deferred until their local boundaries are explicit.
+
+## A65 frame-loop/runtime connection note
+
+A65 connects frame orchestration to runtime orchestration without moving behavior into Core. The frame loop may call the runtime tick step once per frame, but runtime tick behavior remains in `Aurelian.Runtime.Sessions.AurelianRuntimeSession` and is still Dominatus-backed.
+
+This preserves the doctrine split: Core coordinates the high-level frame path, Runtime/Dominatus owns behavior policy flow, world/render extraction is still deferred, Runtime has no graphics/Vulkan responsibility, and `ParallelAiWorldRunner` remains a future implementation detail behind the runner seam.
