@@ -11,6 +11,8 @@ internal sealed class VisibleTriangleFrameInputProvider : IAurelianFrameInputPro
     private readonly uint plantId;
     private readonly string outputImageId;
     private readonly Queue<uint> pendingPresentImageIndices;
+    private readonly VisibleTriangleWindowState windowState;
+    private readonly AurelianVulkanSurface? surface;
     private readonly Dictionary<AurelianFrameId, VisibleTriangleFrameState> frames = new();
     private readonly int maxFrames;
     private int suppliedFrames;
@@ -20,11 +22,14 @@ internal sealed class VisibleTriangleFrameInputProvider : IAurelianFrameInputPro
         uint plantId,
         string outputImageId,
         Queue<uint> pendingPresentImageIndices,
+        VisibleTriangleWindowState windowState,
+        AurelianVulkanSurface? surface,
         int maxFrames)
     {
         ArgumentNullException.ThrowIfNull(swapchain);
         ArgumentNullException.ThrowIfNull(outputImageId);
         ArgumentNullException.ThrowIfNull(pendingPresentImageIndices);
+        ArgumentNullException.ThrowIfNull(windowState);
         if (maxFrames <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxFrames), "Visible triangle frame input provider must supply at least one frame input.");
 
@@ -32,6 +37,8 @@ internal sealed class VisibleTriangleFrameInputProvider : IAurelianFrameInputPro
         this.plantId = plantId;
         this.outputImageId = outputImageId;
         this.pendingPresentImageIndices = pendingPresentImageIndices;
+        this.windowState = windowState;
+        this.surface = surface;
         this.maxFrames = maxFrames;
     }
 
@@ -48,6 +55,13 @@ internal sealed class VisibleTriangleFrameInputProvider : IAurelianFrameInputPro
         if (cancellationToken.IsCancellationRequested)
         {
             return ValueTask.FromCanceled<AurelianFrameInput?>(cancellationToken);
+        }
+
+        windowState.Pump(surface);
+        if (windowState.CloseRequested)
+        {
+            diagnostics.Add($"Frame {frameId.Value} input stopped before acquire because the window requested close.");
+            return ValueTask.FromResult<AurelianFrameInput?>(null);
         }
 
         if (suppliedFrames >= maxFrames)

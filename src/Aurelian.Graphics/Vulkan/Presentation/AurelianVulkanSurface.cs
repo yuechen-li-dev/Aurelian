@@ -12,6 +12,7 @@ public sealed class AurelianVulkanSurface : IDisposable
     private readonly KhrSurface surfaceApi;
     private IWindow? window;
     private SurfaceKHR surface;
+    private bool closeRequested;
     private bool disposed;
 
     internal AurelianVulkanSurface(
@@ -26,6 +27,8 @@ public sealed class AurelianVulkanSurface : IDisposable
         this.window = window;
         this.surface = surface;
         Facts = facts;
+        closeRequested = window.IsClosing;
+        window.Closing += OnWindowClosing;
     }
 
     public PlantId PlantId => plant.Context.Id;
@@ -39,6 +42,12 @@ public sealed class AurelianVulkanSurface : IDisposable
     internal SurfaceKHR Handle => surface;
 
     /// <summary>
+    /// Gets whether the owned Silk.NET window has received a platform close request.
+    /// This is a narrow presentation-surface status hook for samples and tests, not a general input API.
+    /// </summary>
+    public bool IsCloseRequested => closeRequested || window?.IsClosing == true;
+
+    /// <summary>
     /// Pumps the owned Silk.NET window once so visible sample windows can process platform events.
     /// This is intentionally minimal M0 presentation support, not an engine frame loop or input abstraction.
     /// </summary>
@@ -50,6 +59,12 @@ public sealed class AurelianVulkanSurface : IDisposable
         }
 
         window?.DoEvents();
+        closeRequested |= window?.IsClosing == true;
+    }
+
+    private void OnWindowClosing()
+    {
+        closeRequested = true;
     }
 
     public unsafe void Dispose()
@@ -67,8 +82,12 @@ public sealed class AurelianVulkanSurface : IDisposable
             surface = default;
         }
 
-        window?.Dispose();
-        window = null;
+        if (window is not null)
+        {
+            window.Closing -= OnWindowClosing;
+            window.Dispose();
+            window = null;
+        }
         surfaceApi.Dispose();
     }
 }
