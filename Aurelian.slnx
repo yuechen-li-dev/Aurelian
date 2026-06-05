@@ -17,6 +17,7 @@
     <Project Path="tests/Aurelian.AssetTool.Tests/Aurelian.AssetTool.Tests.csproj" />
     <Project Path="tests/Aurelian.Core.Tests/Aurelian.Core.Tests.csproj" />
     <Project Path="tests/Aurelian.Graphics.Tests/Aurelian.Graphics.Tests.csproj" />
+    <Project Path="tests/Aurelian.Integration.Tests/Aurelian.Integration.Tests.csproj" />
     <Project Path="tests/Aurelian.Rendering.Contracts.Tests/Aurelian.Rendering.Contracts.Tests.csproj" />
     <Project Path="tests/Aurelian.Rendering.Null.Tests/Aurelian.Rendering.Null.Tests.csproj" />
     <Project Path="tests/Aurelian.Runtime.Tests/Aurelian.Runtime.Tests.csproj" />

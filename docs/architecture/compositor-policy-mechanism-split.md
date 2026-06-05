@@ -264,3 +264,9 @@ This keeps the design split intact: `Aurelian.Graphics` owns backend wrappers, i
 A55 implements the first Dominatus-backed runtime policy session under `Aurelian.Runtime.Compositor`. The policy consumes only neutral compositor facts and refs, supports passthrough M0 readiness checks, and emits a runtime-only `CompositorDispatchAct` containing the neutral `CompositorDispatchRequest` for a compositor actuator to execute.
 
 The A55 tests use a fake Dominatus actuator, not Vulkan, to prove the actuation shape: ready and reused outputs dispatch, pending outputs wait, unsupported non-passthrough policy requests reject, and failed neutral dispatch results propagate as runtime policy failures. The graphics mechanism bridge remains deferred, so `Aurelian.Graphics` still owns compositor mechanism execution and does not reference Dominatus/runtime policy.
+
+## 14. A56 integration-test bridge status
+
+A56 composes the split only in `tests/Aurelian.Integration.Tests`. The integration project may reference `Aurelian.Runtime`, `Aurelian.Graphics`, and `Aurelian.Rendering.Contracts` because tests are the temporary host boundary for this proof. It registers Dominatus `CompositorDispatchAct` handlers in test code: one fake handler captures the neutral passthrough request, and one real handler delegates to `VulkanCompositorPassthrough.Dispatch(...)` with Vulkan plant-output and presentation-target wrappers.
+
+The production split remains unchanged. Runtime policy still emits only neutral compositor requests through a runtime-local act and does not reference graphics/Vulkan. The Vulkan compositor mechanism still consumes neutral requests and backend wrappers and does not reference runtime policy or Dominatus. A56 intentionally defers production host/frame-loop ownership until the frame pump shape is known.
