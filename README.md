@@ -214,3 +214,7 @@ This is deliberately not a production host, frame loop, sample executable, or re
 A57 promotes `Aurelian.Core` to the high-level Aurelian Engine integration spine instead of creating an `Aurelian.Host` project. Core now owns the engine identity/lifecycle shell and the neutral compositor mechanism bridge seam that can connect Runtime `CompositorDispatchAct` values to a future compositor mechanism implementation.
 
 The A57 Core bridge remains graphics-free: `Aurelian.Core` references `Aurelian.Runtime` and `Aurelian.Rendering.Contracts`, but does not reference `Aurelian.Graphics` or instantiate Vulkan. A production frame pump, Vulkan compositor adapter, visible sample executable, and differential compositor remain deferred.
+
+## A58 — Core Vulkan compositor mechanism adapter M0
+
+A58 implements the production Core-level Vulkan compositor mechanism adapter. `Aurelian.Core` is now allowed to reference `Aurelian.Graphics` as the engine integration spine, and `VulkanCompositorMechanismAdapter` wires the neutral `ICompositorMechanism` abstraction to the existing graphics-side `VulkanCompositorPassthrough` mechanism. Runtime and Graphics remain decoupled: Runtime does not reference Graphics, Graphics does not reference Runtime or Dominatus, and `Aurelian.Rendering.Contracts` remains neutral. A58 does not add a host project, frame pump, automatic swapchain/window creation in Core, differential compositor, or new packages.

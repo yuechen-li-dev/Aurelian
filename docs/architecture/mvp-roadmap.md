@@ -332,3 +332,9 @@ A57 promotes `Aurelian.Core` to the engine integration spine M0. The project is 
 The M0 implementation adds a small `AurelianEngine` lifecycle shell and a neutral compositor actuation bridge. The bridge accepts Runtime `CompositorDispatchAct` values and forwards their neutral `CompositorDispatchRequest` payloads to an abstract Core `ICompositorMechanism`; it does not create a frame loop, instantiate Vulkan, or add a Graphics dependency to Core. No `Aurelian.Host` project is introduced.
 
 Recommended next step: A58 — Core Vulkan compositor mechanism adapter M0.
+
+## A58 — Core Vulkan compositor mechanism adapter M0
+
+A58 is implemented as a Core adapter milestone. `Aurelian.Core` may now reference `Aurelian.Graphics` because Core is the engine integration spine, while `Aurelian.Runtime`, `Aurelian.Graphics`, and `Aurelian.Rendering.Contracts` retain their lower-level decoupling rules.
+
+The adapter connects `ICompositorMechanism` to the prebuilt Vulkan passthrough mechanism and image sets, accepts neutral compositor dispatch requests, and returns neutral dispatch results. Frame-loop ownership, automatic window/swapchain creation, and present semaphore integration remain deferred. The recommended next milestone is **A59 — Minimal frame pump M0**.

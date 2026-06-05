@@ -8,7 +8,7 @@ using Silk.NET.Vulkan;
 
 namespace Aurelian.Graphics.Vulkan.Compositor;
 
-public sealed unsafe class VulkanCompositorPassthrough : IDisposable
+public sealed unsafe class VulkanCompositorPassthrough : IVulkanCompositorPassthroughMechanism, IDisposable
 {
     private readonly AurelianVulkanPlant plant;
     private readonly VulkanCommandBufferPool commandBufferPool;
