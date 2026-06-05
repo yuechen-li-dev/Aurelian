@@ -148,7 +148,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
 
                 if (!TryMapTextureFormat(swapchain.Facts.SelectedFormat, out VulkanTextureFormat offscreenFormat))
                 {
-                    throw new VisibleTriangleSampleException($"Swapchain format '{swapchain.Facts.SelectedFormat}' is not mapped to an offscreen texture format by the A62 sample.");
+                    throw new VisibleTriangleSampleException($"Swapchain format '{swapchain.Facts.SelectedFormat}' is not mapped to an offscreen texture format by the A66 sample.");
                 }
 
                 var allocator = new RawVulkanMemoryAllocator(plant);
@@ -166,7 +166,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                 VulkanBufferUploadResult upload = uploader.Upload(new VulkanBufferUploadRequest(
                     vertexBuffer,
                     CreateTriangleVertexBytes(),
-                    DebugName: "a62.visible-triangle.vertices"));
+                    DebugName: "a66.visible-triangle.vertices"));
                 Ensure(upload.Success, $"Vertex upload failed: {FormatDiagnostics(upload)}");
 
                 VulkanFenceOperationResult uploadWait = fences.CommandListFence.WaitForValue(upload.SignalFenceValue!.Value, FenceWaitTimeoutNanoseconds);
@@ -174,7 +174,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
 
                 RecordAndSubmitOffscreenTriangle(plant, commandPool, submitter, renderPass, framebuffer, pipeline, vertexBuffer);
 
-                var frameId = new AurelianFrameId(62);
+                var frameId = new AurelianFrameId(66);
                 PlantOutputRef outputRef = new(plant.Context.Id.Value, frameId.Value, "triangle.offscreen");
                 VulkanPlantOutputImageSet outputs = new([new VulkanPlantOutputImage(outputRef, offscreenColor)]);
                 VulkanPresentationTargetImageSet presentationTargets = swapchain.CreatePresentationTargetImageSet();
@@ -298,7 +298,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                 VulkanTextureUsage.ColorAttachment | VulkanTextureUsage.TransferSource | VulkanTextureUsage.TransferDestination,
                 VulkanMemoryUsage.GpuOnly,
                 VulkanResourceLayout.Undefined,
-                DebugName: "a62.visible-triangle.offscreen-color"));
+                DebugName: "a66.visible-triangle.offscreen-color"));
 
         Ensure(result.Success, $"Offscreen color target creation failed: {FormatDiagnostics(result)}");
         return result.Texture!;
@@ -363,7 +363,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                 SizeBytes: 72,
                 VulkanBufferUsage.Vertex | VulkanBufferUsage.TransferDestination,
                 VulkanMemoryUsage.GpuOnly,
-                "a62.visible-triangle.vertex-buffer"));
+                "a66.visible-triangle.vertex-buffer"));
 
         Ensure(result.Success, $"Vertex buffer creation failed: {FormatDiagnostics(result)}");
         return result.Buffer!;
@@ -412,7 +412,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
             commandBuffer,
             WaitForCompletion: true,
             TimeoutNanoseconds: FenceWaitTimeoutNanoseconds,
-            DebugName: "a62.visible-triangle.offscreen-submit"));
+            DebugName: "a66.visible-triangle.offscreen-submit"));
         Ensure(submit.Success, $"Offscreen triangle submit failed: {FormatDiagnostics(submit)}");
     }
 

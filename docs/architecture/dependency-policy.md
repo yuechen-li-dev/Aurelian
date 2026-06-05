@@ -411,3 +411,10 @@ The inspected `ParallelAiWorldRunner` currently belongs to vendored `Dominatus.C
 A65 adds a narrow Core-owned runtime ticker seam for frame orchestration. Core may depend on Runtime session DTOs/results because Core owns high-level engine/frame orchestration, but Runtime must not depend back on Core. The real `AurelianRuntimeSession` path is connected by a Core-side adapter, preserving the dependency direction and avoiding a project cycle.
 
 The seam is intentionally not a service locator, singleton, reflection hook, graphics bridge, or renderer abstraction. It only lets the frame loop tick a prepared runtime session before the existing frame pump. Runtime remains graphics-free; Graphics remains runtime/Dominatus-free; Rendering.Contracts remains neutral.
+
+## A66 visible triangle frame-loop/runtime-session sample note
+
+A66 is a sample conversion only. `samples/Aurelian.VisibleTriangle` keeps its explicit references to Core, Graphics, Runtime, and Rendering.Contracts so the sample can compose already-prepared visible Vulkan resources with `AurelianEngine`, `AurelianRuntimeSession`, the Core runtime ticker adapter, `AurelianFrameLoop`, the runtime compositor policy, the Core compositor bridge, the Vulkan compositor mechanism, and the prepared presentation mechanism.
+
+No dependency boundary is relaxed: Runtime remains graphics-free, Graphics remains runtime/Dominatus-free, Core remains the high-level integration spine, and the sample does not reference `Aurelian.Shaders`, `Aurelian.Assets`, `Aurelian.AssetTool`, or `Aurelian.World` directly. A66 adds no packages, service locator, singleton, reflection construction path, `Aurelian.Host`, VMA/VMASharp, Vortice, CodeReferences change, or vendor modification. The finite sample is one-frame M0 until a later milestone adds safe per-frame swapchain acquire/present.
+
