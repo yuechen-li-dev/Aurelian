@@ -322,7 +322,7 @@ public static unsafe class VulkanSwapchainFactory
     private static IWindow CreateWindow(VulkanSwapchainCreateOptions options)
     {
         WindowOptions windowOptions = WindowOptions.DefaultVulkan;
-        windowOptions.IsVisible = false;
+        windowOptions.IsVisible = options.Visible;
         windowOptions.Size = new Vector2D<int>((int)Math.Clamp(options.Width, 1, int.MaxValue), (int)Math.Clamp(options.Height, 1, int.MaxValue));
         windowOptions.Title = options.Title;
         windowOptions.VSync = options.VSync;

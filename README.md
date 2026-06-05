@@ -242,3 +242,9 @@ Status: implemented.
 A61 adds explicit Core-side graphics subsystem vocabulary under `Aurelian.Core.Engine.Graphics`. Core now distinguishes `Headless` and `PreparedVisible` graphics modes, supports only `External` ownership in M0, and models externally prepared compositor/presentation mechanisms as an `AurelianPreparedGraphicsSubsystem` bundle with typed validation diagnostics.
 
 The A61 model is configuration/lifecycle vocabulary only. It does not create Vulkan plants, surfaces/windows, swapchains, command pools, graphics resources, a continuous frame loop, a visible sample executable, or an `Aurelian.Host` project. Future visible frame-loop/sample work should consume a validated prepared subsystem instead of hiding graphics ownership inside `AurelianFramePump`.
+
+## A62 Minimal visible triangle sample executable status
+
+A62 adds `samples/Aurelian.VisibleTriangle`, a small human-run sample executable for the current prepared-visible engine path. The sample creates the Vulkan presentation plant, visible swapchain/window, offscreen triangle resources, compositor passthrough mechanism, Core Vulkan compositor adapter, prepared visible graphics bundle, started `AurelianEngine`, and `AurelianFramePump` externally, then runs one frame through the Runtime compositor policy and presents the compositor output to the swapchain.
+
+The sample intentionally uses sample-local static SPIR-V fixtures and does not reference `Aurelian.Shaders`, load assets, compile shaders at runtime, render directly to the swapchain, create a continuous engine loop, add `Aurelian.Host`, or add new packages. CI should build the sample but should not run it in headless environments.

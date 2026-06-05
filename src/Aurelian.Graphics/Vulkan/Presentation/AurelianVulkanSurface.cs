@@ -38,6 +38,20 @@ public sealed class AurelianVulkanSurface : IDisposable
 
     internal SurfaceKHR Handle => surface;
 
+    /// <summary>
+    /// Pumps the owned Silk.NET window once so visible sample windows can process platform events.
+    /// This is intentionally minimal M0 presentation support, not an engine frame loop or input abstraction.
+    /// </summary>
+    public void PumpEvents()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        window?.DoEvents();
+    }
+
     public unsafe void Dispose()
     {
         if (disposed)

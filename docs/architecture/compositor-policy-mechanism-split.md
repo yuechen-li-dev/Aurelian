@@ -329,3 +329,9 @@ This keeps Runtime policy free of Graphics, keeps Graphics free of Runtime/Domin
 A61 adds Core-side graphics subsystem vocabulary without changing the policy/mechanism split. `AurelianEngineGraphicsOptions` records whether the engine is `Headless` or `PreparedVisible`, and M0 only supports `External` ownership so callers remain responsible for creating and disposing any Vulkan/window/swapchain resources.
 
 `AurelianPreparedGraphicsSubsystem` groups the neutral compositor mechanism with an optional-for-headless, required-for-prepared-visible presentation mechanism. Validation reports typed Core diagnostics for missing options, missing prepared mechanisms, unsupported ownership, and presentation supplied to headless mode. The frame pump still consumes the existing bridge/mechanism path and does not create graphics resources; future visible loops/samples should pass through this explicit prepared-subsystem vocabulary instead of embedding host policy in the pump.
+
+## A62 sample-path note
+
+A62 exercises the documented compositor policy/mechanism split from a standalone sample executable. The visible triangle sample prepares graphics resources outside Core, runs `AurelianFramePump.RunOneFrameAsync(...)` so Runtime/Dominatus policy emits the neutral compositor dispatch, routes that dispatch through `CompositorActuationBridge`, executes the Vulkan compositor passthrough mechanism through `VulkanCompositorMechanismAdapter`, and presents the compositor-produced swapchain image.
+
+The sample path is intentionally not direct swapchain rendering and not a new policy layer. It keeps the neutral contract boundary intact, uses sample-local static SPIR-V bytes rather than runtime shader compilation, and leaves continuous frame-loop ownership, differential composition, asset/shader artifact loading, and input/window abstractions deferred.
