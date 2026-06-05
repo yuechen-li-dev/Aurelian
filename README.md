@@ -226,3 +226,11 @@ Status: implemented.
 A59 adds the first one-frame engine orchestration shell in `Aurelian.Core`. The new `Aurelian.Core.Engine.Frames` namespace owns a minimal frame pump that accepts explicit frame input and compositor policy facts, runs one logical frame through the runtime compositor policy session, routes compositor dispatch acts through the Core `CompositorActuationBridge`, and returns a typed frame result with status and diagnostics.
 
 The A59 frame pump is deliberately mechanism-agnostic: it depends on the neutral `ICompositorMechanism` bridge path and is covered by Core tests using a fake compositor mechanism. It does not create a continuous frame loop, window, swapchain, Vulkan instance/device/resources, render graph, scheduler, asset path, world update path, `Aurelian.Host`, service locator, singleton, reflection path, new package dependency, CodeReferences change, or vendor change.
+
+## A60 — Vulkan-backed visible frame pump integration M0
+
+Status: implemented.
+
+A60 adds a headless-safe integration proof that the one-frame Core pump can drive the real visible Vulkan compositor path through prepared inputs and prepared mechanisms. The test-owned harness creates the presentation Vulkan plant, swapchain, acquired image, offscreen triangle source, command/fence/allocator resources, `VulkanCompositorPassthrough`, `VulkanCompositorMechanismAdapter`, `CompositorActuationBridge`, and started `AurelianEngine`, then calls `AurelianFramePump.RunOneFrameAsync(...)` with explicit compositor policy facts.
+
+The frame pump remains a consumer of prepared frame inputs and mechanisms. It still does not create a Vulkan plant, surface/window, swapchain, textures, command pools, compositor mechanism, graphics resources, continuous frame loop, production host object, or `Aurelian.Host` project. Production frame loop ownership and engine graphics subsystem options remain deferred.

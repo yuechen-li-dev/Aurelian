@@ -16,4 +16,7 @@
     <ProjectReference Include="../../src/Aurelian.Graphics/Aurelian.Graphics.csproj" />
     <ProjectReference Include="../../src/Aurelian.Rendering.Contracts/Aurelian.Rendering.Contracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Aurelian.Graphics.Tests/Fixtures/Spirv/TriangleSpirvFixtures.cs" Link="Support/Spirv/TriangleSpirvFixtures.cs" />
+  </ItemGroup>
 </Project>

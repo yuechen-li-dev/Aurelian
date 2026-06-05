@@ -346,3 +346,11 @@ Status: implemented.
 A59 establishes `Aurelian.Core.Engine.Frames` as the first high-level frame orchestration shell. The M0 pump runs exactly one logical engine frame from explicit frame facts and compositor policy facts through `CompositorPolicySession`, a per-frame Dominatus `ActuatorHost`, the Core `CompositorActuationBridge`, and an injected neutral `ICompositorMechanism`, then reports a typed `AurelianFrameResult`.
 
 This milestone intentionally remains pre-loop and pre-host: there is no continuous frame loop, no window pump, no swapchain creation, no Vulkan setup inside the pump, no render graph, no world extraction/update integration, and no `Aurelian.Host` project. A60 should build on the proven abstract one-frame pump with a Vulkan-backed visible frame pump integration M0.
+
+## A60 — Vulkan-backed visible frame pump integration M0
+
+Status: implemented.
+
+A60 proves the full externally-prepared visible path: presentation-enabled Vulkan setup draws the checked-in-SPIR-V offscreen triangle, wraps that output in the Core `VulkanCompositorMechanismAdapter`, runs `AurelianFramePump.RunOneFrameAsync(...)`, lets Runtime/Dominatus emit `CompositorDispatchAct`, routes through `CompositorActuationBridge`, invokes graphics `VulkanCompositorPassthrough`, transitions/copies into the acquired swapchain image, and presents from the test harness.
+
+The implementation is integration-test proof only. Core's frame pump still consumes explicit `AurelianFrameInput` and an injected bridge/mechanism; it owns no Vulkan/window/swapchain/texture/command setup and does not introduce a continuous frame loop, production host, `Aurelian.Host`, render graph, scheduler, asset integration, or shader compiler dependency in Graphics. Recommended next milestone: **A61 — Engine graphics subsystem options M0**.
