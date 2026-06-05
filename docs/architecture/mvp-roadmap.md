@@ -392,3 +392,10 @@ A64 does not implement full simulation, render extraction, graphics submission, 
 A65 is implemented as the Core-owned frame-loop/runtime-session connection. `AurelianFrameLoop` can run an optional `AurelianRuntimeTickFrameStep` after frame input is acquired and before `AurelianFramePump.RunOneFrameAsync(...)`. The step calls a small `IAurelianRuntimeTicker` seam, and the real session path is supplied through `AurelianRuntimeSessionTickerAdapter` so Runtime does not need to reference Core.
 
 This milestone does not add world simulation, render extraction, processor systems, window/swapchain creation, or parallel runtime runner integration. Runtime remains graphics-free, Graphics remains runtime/Dominatus-free, and `ParallelAiWorldRunner` remains deferred behind the runtime runner seam.
+
+## A66 — Visible triangle sample uses frame loop + runtime session M0
+
+A66 updates `samples/Aurelian.VisibleTriangle` from the A62 manual one-frame pump sample to the current Core/Runtime/Graphics spine. The sample still creates the prepared visible Vulkan setup itself, then starts `AurelianEngine`, starts a Dominatus-backed `AurelianRuntimeSession`, adapts it through `AurelianRuntimeSessionTickerAdapter`, runs `AurelianRuntimeTickFrameStep` from `AurelianFrameLoop`, pumps the compositor path, presents through the prepared `IPresentationMechanism`, and stops runtime/engine during cleanup.
+
+The sample remains finite and one-frame M0 by default because it still prepares one acquired swapchain target. It does not add an infinite game loop, `Aurelian.Host`, engine-owned Vulkan/window/swapchain lifecycle, input system, scheduler, asset loading, runtime shader compilation, render graph, world integration, new packages, VMA/VMASharp, Vortice, CodeReferences changes, or vendor changes. Recommended next milestone: **A67 — Multi-frame visible sample acquire/present M0**.
+
