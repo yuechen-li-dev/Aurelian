@@ -362,3 +362,11 @@ Status: implemented.
 A61 adds `Aurelian.Core.Engine.Graphics` as the Core-side options and lifecycle vocabulary for prepared graphics subsystem ownership. The M0 model supports `Headless` and `PreparedVisible` graphics modes, only `External` ownership, a prepared subsystem bundle over neutral `ICompositorMechanism` and `IPresentationMechanism` seams, and typed validation status/diagnostics.
 
 `AurelianEngineOptions` now carries normalized graphics options, defaulting null graphics configuration to `Headless`. The milestone remains options/configuration only: Core does not instantiate Vulkan plants/devices/windows/swapchains, does not move A60 integration setup into production, and does not add a frame loop, sample executable, host project, package, service locator, singleton, or reflection construction path. Recommended next milestone: **A62 — Minimal visible triangle sample executable**.
+
+## A62 — Minimal visible triangle sample executable
+
+Status: implemented.
+
+A62 adds `samples/Aurelian.VisibleTriangle` as the first standalone sample executable for the current visible engine path. It externally prepares the presentation-enabled Vulkan plant, visible swapchain/window, acquired presentation target, offscreen triangle, allocator/fence/command resources, compositor passthrough mechanism, Core Vulkan compositor adapter, and prepared visible graphics bundle. It then starts an `AurelianEngine` configured with `PreparedVisible`, creates an `AurelianFramePump`, runs one frame through the Runtime compositor policy, copies the offscreen triangle through compositor passthrough, presents the swapchain image, pumps window events briefly, and exits with diagnostics.
+
+A62 remains a minimal sample only. It does not introduce a production frame loop, editor, host project, asset loading, runtime shader compilation, world integration, render graph, differential compositor, VMA/VMASharp, Vortice, new package dependency, CodeReferences change, or vendor change. Recommended next milestone: **A63 — Minimal production frame loop M0**.

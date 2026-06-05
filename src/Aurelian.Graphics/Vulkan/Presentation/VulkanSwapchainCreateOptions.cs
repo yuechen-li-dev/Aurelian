@@ -4,4 +4,5 @@ public sealed record VulkanSwapchainCreateOptions(
     uint Width = 640,
     uint Height = 480,
     bool VSync = true,
-    string Title = "Aurelian");
+    string Title = "Aurelian",
+    bool Visible = false);
