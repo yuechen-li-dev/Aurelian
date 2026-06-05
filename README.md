@@ -218,3 +218,11 @@ The A57 Core bridge remains graphics-free: `Aurelian.Core` references `Aurelian.
 ## A58 — Core Vulkan compositor mechanism adapter M0
 
 A58 implements the production Core-level Vulkan compositor mechanism adapter. `Aurelian.Core` is now allowed to reference `Aurelian.Graphics` as the engine integration spine, and `VulkanCompositorMechanismAdapter` wires the neutral `ICompositorMechanism` abstraction to the existing graphics-side `VulkanCompositorPassthrough` mechanism. Runtime and Graphics remain decoupled: Runtime does not reference Graphics, Graphics does not reference Runtime or Dominatus, and `Aurelian.Rendering.Contracts` remains neutral. A58 does not add a host project, frame pump, automatic swapchain/window creation in Core, differential compositor, or new packages.
+
+## A59 — Minimal Core frame pump M0
+
+Status: implemented.
+
+A59 adds the first one-frame engine orchestration shell in `Aurelian.Core`. The new `Aurelian.Core.Engine.Frames` namespace owns a minimal frame pump that accepts explicit frame input and compositor policy facts, runs one logical frame through the runtime compositor policy session, routes compositor dispatch acts through the Core `CompositorActuationBridge`, and returns a typed frame result with status and diagnostics.
+
+The A59 frame pump is deliberately mechanism-agnostic: it depends on the neutral `ICompositorMechanism` bridge path and is covered by Core tests using a fake compositor mechanism. It does not create a continuous frame loop, window, swapchain, Vulkan instance/device/resources, render graph, scheduler, asset path, world update path, `Aurelian.Host`, service locator, singleton, reflection path, new package dependency, CodeReferences change, or vendor change.

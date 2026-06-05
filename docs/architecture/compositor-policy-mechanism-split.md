@@ -284,3 +284,21 @@ A future milestone may add a production Vulkan adapter that implements the Core 
 A58 promotes the A56 integration-test bridge into a production Core adapter. `Aurelian.Core.Graphics.Vulkan.Compositor.VulkanCompositorMechanismAdapter` implements the neutral `ICompositorMechanism` seam and delegates to the graphics-side `VulkanCompositorPassthrough` using prebuilt `VulkanPlantOutputImageSet` and `VulkanPresentationTargetImageSet` dependencies.
 
 This preserves the policy/mechanism split: Runtime/Dominatus policy emits neutral dispatch requests, Core performs engine-spine wiring, and Graphics owns Vulkan image resolution, command recording, copy submission, and backend diagnostics. A58 deliberately does not add a frame loop, host project, differential compositor, or automatic swapchain/window instantiation in Core.
+
+## A59 Core frame pump bridge
+
+A59 adds the first Core-owned one-frame orchestration layer above the compositor policy/mechanism split. `AurelianFramePump` accepts explicit `AurelianFrameInput` containing compositor policy facts, creates a local per-frame `ActuatorHost`, registers a narrow handler that invokes `CompositorActuationBridge`, and runs `CompositorPolicySession.RunOnceAsync(...)`.
+
+The flow remains split by policy and mechanism boundaries:
+
+```text
+Core frame input/facts
+  -> Runtime compositor policy session
+  -> Runtime CompositorDispatchAct
+  -> Core CompositorActuationBridge
+  -> neutral Core ICompositorMechanism
+  -> mechanism-specific implementation supplied by caller
+  -> typed Core frame result
+```
+
+The pump does not call Vulkan APIs, create windows, create swapchains, or allocate graphics resources. Vulkan remains behind the existing Core adapter and `Aurelian.Graphics` mechanism implementation, while A59 unit tests prove the frame pump against a fake `ICompositorMechanism`.
