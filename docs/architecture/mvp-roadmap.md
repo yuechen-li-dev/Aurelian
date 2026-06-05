@@ -378,3 +378,11 @@ Status: implemented.
 A63 adds the first minimal production frame loop abstraction in `Aurelian.Core.Engine.Frames`. `AurelianFrameLoop` is constructed over an existing `AurelianFramePump`, a prepared-input provider (`IAurelianFrameInputProvider`), an optional abstract `IPresentationMechanism`, and small loop options for finite max-frame execution, presentation-after-success, and stop-on-frame-failure behavior.
 
 The loop returns typed `AurelianFrameLoopResult` diagnostics with status, stop reason, attempted/completed counters, and per-iteration frame/presentation records. It supports cancellation and provider-driven completion, but deliberately does not own window event pumping, graphics lifecycle, Vulkan/window/swapchain creation, compositor mechanism creation, render graphs, asset loading, shader compilation, scheduler threads, framerate limiting, or an unbounded default loop. Recommended next milestone: **A64 — Visible triangle sample uses frame loop M0**.
+
+## A64 — Dominatus-backed runtime tick M0
+
+A64 implements `Aurelian.Runtime.Sessions.AurelianRuntimeSession` as the preferred runtime tick/session M0. The session owns or receives a Dominatus `AiWorld`, `ActuatorHost`, runtime policy agent, and `IAurelianAiWorldRunner`; validates typed `AurelianRuntimeTickInput`; returns typed status/diagnostics; and proves behavior orchestration by dispatching and awaiting a neutral `AurelianRuntimeTickAct` through Dominatus actuation.
+
+A64 does not implement full simulation, render extraction, graphics submission, or a frame-loop bridge. Core remains the engine integration spine and should be the next layer to call the runtime session from the A63 frame loop. Graphics remains mechanism-only and Runtime remains graphics-free.
+
+`ParallelAiWorldRunner` was inspected in vendored `Dominatus.Core`. It is a staged parallel agent runner for one `AiWorld`, with cancellation, aggregate fault handling, and write-conflict policy. A64 defers a Runtime adapter until multi-agent/world tick M1 and ships the sequential `IAurelianAiWorldRunner` implementation for M0.

@@ -256,3 +256,9 @@ Status: implemented.
 A63 adds a small Core-owned frame loop abstraction under `Aurelian.Core.Engine.Frames`. `AurelianFrameLoop` consumes an existing `AurelianFramePump`, obtains explicit prepared `AurelianFrameInput` values from `IAurelianFrameInputProvider`, runs finite frame-count loops by default, supports cancellation, optionally calls an abstract `IPresentationMechanism` after successful frames, and returns typed loop status, stop reason, iteration records, counters, and diagnostics.
 
 The frame loop remains orchestration-only. It does not create Vulkan plants, windows, surfaces, swapchains, compositor mechanisms, graphics resources, assets, render graphs, scheduler threads, or an `Aurelian.Host` project. The A62 visible triangle sample still uses the one-frame pump directly; converting that sample to consume the A63 loop is deferred to A64.
+
+## A64 runtime tick status
+
+A64 adds the preferred Dominatus-backed runtime tick path under `Aurelian.Runtime.Sessions`. `AurelianRuntimeSession` owns or receives a Dominatus `AiWorld`, `ActuatorHost`, runtime policy agent, and `IAurelianAiWorldRunner`; ticks validate typed input, dispatch a neutral `AurelianRuntimeTickAct` through Dominatus actuation, await completion, and return typed status/diagnostics. The legacy `AurelianRuntime.Tick()` compatibility shell remains minimal and is not the path for new runtime orchestration.
+
+A64 keeps Runtime free of graphics/window/backend work, leaves world/render extraction deferred, and does not wire Core's frame loop yet. The inspected `ParallelAiWorldRunner` remains a vendored Dominatus.Core staged parallel runner; Runtime now has a runner interface so a deliberate adapter can be added later without moving vendor code.
