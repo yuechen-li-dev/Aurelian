@@ -418,3 +418,9 @@ A66 is a sample conversion only. `samples/Aurelian.VisibleTriangle` keeps its ex
 
 No dependency boundary is relaxed: Runtime remains graphics-free, Graphics remains runtime/Dominatus-free, Core remains the high-level integration spine, and the sample does not reference `Aurelian.Shaders`, `Aurelian.Assets`, `Aurelian.AssetTool`, or `Aurelian.World` directly. A66 adds no packages, service locator, singleton, reflection construction path, `Aurelian.Host`, VMA/VMASharp, Vortice, CodeReferences change, or vendor modification. The finite sample is one-frame M0 until a later milestone adds safe per-frame swapchain acquire/present.
 
+
+## A67 visible sample multi-frame dependency note
+
+A67 is a sample-local lifecycle update only. The visible triangle sample may hold a finite queue of acquired swapchain image indices and finite per-frame `PlantOutputRef` wrappers because it owns the prepared Vulkan setup, but this does not move Vulkan/window/swapchain creation into Core or Runtime.
+
+The dependency boundaries remain unchanged: Runtime stays graphics-free, Graphics stays runtime/Dominatus-free, Core remains the high-level frame/engine spine, and the sample adds no package references, runtime shader compiler dependency, asset dependency, service locator, singleton, reflection construction path, VMA/VMASharp, Vortice, CodeReferences change, or vendor modification.

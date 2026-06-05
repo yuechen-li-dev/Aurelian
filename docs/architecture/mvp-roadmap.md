@@ -399,3 +399,9 @@ A66 updates `samples/Aurelian.VisibleTriangle` from the A62 manual one-frame pum
 
 The sample remains finite and one-frame M0 by default because it still prepares one acquired swapchain target. It does not add an infinite game loop, `Aurelian.Host`, engine-owned Vulkan/window/swapchain lifecycle, input system, scheduler, asset loading, runtime shader compilation, render graph, world integration, new packages, VMA/VMASharp, Vortice, CodeReferences changes, or vendor changes. Recommended next milestone: **A67 — Multi-frame visible sample acquire/present M0**.
 
+
+## A67 — Visible triangle sample finite multi-frame acquire/present M0
+
+A67 updates `samples/Aurelian.VisibleTriangle` so the prepared-visible sample can run multiple finite frames through the existing engine/runtime/frame-loop/compositor spine. The sample now defaults to three frames, accepts `--frames N` with a positive finite cap, acquires a fresh swapchain image inside the sample-local frame input provider for each frame, emits frame-specific `AurelianFrameInput` and `PresentationTargetRef` values, and presents the matching acquired image through a sample-local FIFO presentation mechanism after the Core frame loop completes that frame.
+
+The offscreen triangle remains static for M0: setup renders it once, then creates finite per-planned-frame `PlantOutputRef` wrappers over the same offscreen Vulkan texture so the existing Vulkan compositor adapter can resolve each runtime policy dispatch without changing production resolver contracts. Vulkan/window/swapchain ownership remains sample-local; Core owns no graphics lifecycle, Runtime stays graphics-free, and there is still no infinite host loop, asset loading, runtime shader compilation, world integration, render graph, input system, scheduler, VMA/VMASharp, Vortice, new package, CodeReferences change, or vendor modification. Recommended next milestone: **A68 — Sample window event pump/input M0**.
