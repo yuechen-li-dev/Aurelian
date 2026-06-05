@@ -397,3 +397,11 @@ The only production graphics changes are a hidden-by-default `VulkanSwapchainCre
 A63 keeps high-level frame-loop orchestration in `Aurelian.Core.Engine.Frames` while preserving prepared ownership boundaries. The new `AurelianFrameLoop` consumes an existing `AurelianFramePump`, obtains prepared frame inputs through `IAurelianFrameInputProvider`, and optionally presents through `IPresentationMechanism`; it does not allocate or create Vulkan plants, windows, surfaces, swapchains, graphics resources, compositor mechanisms, or presentation mechanisms.
 
 No dependency boundary is relaxed: `Aurelian.Runtime` remains graphics-free, `Aurelian.Graphics` remains Runtime/Dominatus-free, and `Aurelian.Rendering.Contracts` remains neutral. A63 adds no packages, `Aurelian.Host`, service locator, singleton, reflection construction path, VMA/VMASharp, Vortice, CodeReferences change, or vendor modification. The visible triangle sample conversion to the frame loop is intentionally deferred.
+
+## A64 runtime session boundary
+
+A64 makes the preferred `Aurelian.Runtime` tick path explicitly Dominatus-backed through `Aurelian.Runtime.Sessions.AurelianRuntimeSession`. Runtime may own Dominatus session orchestration, typed runtime tick acts, typed diagnostics, and world-runner seams. Runtime must not grow a hand-rolled `TickControl -> DispatchActs -> TickSimulation -> ExtractRenderSnapshot -> SubmitRender` processor loop.
+
+`Aurelian.Core` remains the engine integration spine and may call a runtime session from a future frame-loop bridge. `Aurelian.Graphics` remains mechanism-only and is not referenced by Runtime. World/render extraction and graphics submission remain deferred seams outside the A64 runtime tick.
+
+The inspected `ParallelAiWorldRunner` currently belongs to vendored `Dominatus.Core` as a staged parallel agent runner for one `AiWorld`. A64 leaves it there and exposes `IAurelianAiWorldRunner` so Runtime can adopt a deliberate adapter later without moving vendor code or creating dependency cycles.

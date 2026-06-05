@@ -411,3 +411,9 @@ WorldDataDocument -> RenderSnapshot -> RenderCommandPlan -> NullRenderer
 ```
 
 This path proves the data flow while preserving the no-GPU, no-window, no-assets, and no-shaders boundaries.
+
+## A64 runtime tick doctrine note
+
+A64 adds `AurelianRuntimeSession` as the preferred runtime tick path. The session is intentionally Dominatus-shaped: tick facts are written to a runtime agent blackboard, a Dominatus HFSM node emits a neutral `AurelianRuntimeTickAct`, actuation completion is observed through Dominatus events, and typed runtime diagnostics report lifecycle, validation, cancellation, runner, and actuation failures.
+
+This reinforces the world doctrine boundary: world data remains world-owned, Dominatus owns behavior orchestration, actuators remain the seam for side effects, and Runtime does not become a global world/render/graphics processor. Render extraction, graphics submission, and real world mutation acts are deferred until their local boundaries are explicit.
