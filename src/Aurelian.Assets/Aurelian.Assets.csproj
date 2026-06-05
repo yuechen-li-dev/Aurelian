@@ -10,6 +10,7 @@
     <PackageReference Include="Tomlyn" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../Aurelian.Rendering.Contracts/Aurelian.Rendering.Contracts.csproj" />
     <ProjectReference Include="../Aurelian.Shaders/Aurelian.Shaders.csproj" />
   </ItemGroup>
 </Project>

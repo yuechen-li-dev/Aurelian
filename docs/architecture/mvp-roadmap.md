@@ -413,3 +413,13 @@ Status: implemented.
 A68 keeps window and input behavior sample-local while making `samples/Aurelian.VisibleTriangle` behave more like a minimal finite desktop app. The visible sample now owns a `VisibleTriangleWindowState`, pumps the owned Silk.NET window before each frame input/acquire and after each present, observes `AurelianVulkanSurface.IsCloseRequested`, and returns `null` from the sample-local frame input provider when close is requested so `AurelianFrameLoop` stops through the existing `InputProviderCompleted` path. The CLI remains finite (`--frames N`, default `3`, capped at `300`) and the short post-loop hold only continues while the window has not requested close.
 
 This milestone deliberately does not add a production input system, engine-owned window lifecycle, `Aurelian.Host`, an unbounded game loop, scheduler/threading model, asset loading, runtime shader compilation, render graph, world integration, VMA/VMASharp, Vortice, new packages, or CodeReferences/vendor changes.
+
+## A69 — Shader artifact TOML + SPIR-V file bridge M0
+
+Status: implemented.
+
+A69 introduces the primary file-based shader artifact path. `Aurelian.Shaders` now writes successful SDSL-V/HLSL/SPIR-V artifacts as a deterministic directory containing `shader.toml`, stage SPIR-V byte files, and optional `generated.hlsl`. A69b adds `spirv_encoding` so generated build artifacts can keep raw binary `.spv` files while checked-in sample artifacts use text-safe `.spv.hex` transport files. The TOML manifest stores only metadata, relative paths, encoding, and lowercase SHA-256 hashes; SPIR-V bytes stay in external files rather than TOML arrays, base64, or runtime C# source.
+
+`Aurelian.Assets` now loads `shader.toml`, validates the format and stage records, resolves SPIR-V files relative to the manifest directory, decodes `hex` files when requested, verifies hashes over decoded/raw bytes, rejects duplicates/missing/empty stages, and returns neutral `CompiledShaderProgram` contracts. `Aurelian.Graphics` continues to consume only `CompiledShaderProgram` and does not reference `Aurelian.Shaders` or `Aurelian.Assets`.
+
+The visible triangle sample now copies `Assets/Shaders/SmokeTriangle/**` to its output and loads its checked-in `.spv.hex` shader artifact through `Aurelian.Assets` at startup. It no longer uses sample-local static SPIR-V arrays and still performs no runtime SDSL-V/HLSL compilation. Recommended next milestone: **A70 — Asset manifest references shader artifacts M0**.
