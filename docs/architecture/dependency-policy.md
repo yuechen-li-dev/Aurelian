@@ -451,3 +451,9 @@ Responsibilities remain layered:
 - Samples may load checked-in artifact files through `Aurelian.Assets`, but must not compile SDSL-V/HLSL at runtime or depend on `Aurelian.Shaders` for the runtime path.
 
 C# SPIR-V byte arrays are fixture/bootstrap-only and are not the primary runtime artifact format. `spirv_sha256` is always computed over decoded/raw SPIR-V bytes, not over hex transport text.
+
+## A70 asset manifest shader reference policy
+
+A70 allows `Aurelian.Assets` asset manifests to reference existing shader artifact TOML files through repeated `[[shaders]]` entries. The asset layer owns the manifest schema, validation, path safety rules, manifest-relative path resolution, and mapping of shader artifact load failures into asset diagnostics. The shader artifact loader still returns neutral `CompiledShaderProgram` contracts from `Aurelian.Rendering.Contracts`.
+
+This does not relax the graphics boundary. `Aurelian.Assets` must not reference `Aurelian.Graphics`, Vulkan/Silk graphics APIs, swapchain/surface/window concepts, runtime DXC, VMA/VMASharp, Vortice, service locators, global singletons, reflection factories, CodeReferences, or vendor source. A70 also does not introduce material, mesh, texture, cache, hot-reload, or graphics-resource ownership semantics.
