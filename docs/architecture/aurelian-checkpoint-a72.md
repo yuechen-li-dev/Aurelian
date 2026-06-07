@@ -18,6 +18,10 @@ The engine is still pre-MVP. The visible triangle is a valuable proof of real se
 
 Implementation should pause for human review before A73.
 
+## A73 Vision 1 integration note
+
+A73 links `docs/architecture/visions-1.md` as Aurelian Vision 1, the post-checkpoint north star for explicit Dominatus-native orchestration, dumb renderer strategy, materials/UI/reference-renderer/raymarch/multi-plant/LLM-DM direction, and the rule that Aurelian owns world truth while mechanisms render, validate, or execute bounded requests. Vision 1 is aspirational where it discusses external renderers, Machina UI, Margaret, ray marching, multi-plant/multi-GPU, and LLM/DM gameplay; this A72 checkpoint remains the source of current implemented repo reality until a later checkpoint supersedes it.
+
 ## 2. Current executable proof
 
 The current demo path is the visible triangle sample:

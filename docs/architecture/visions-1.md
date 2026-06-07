@@ -6,6 +6,10 @@ This document records the first major vision checkpoint for the Aurelian Engine.
 
 It is not a milestone plan, not an implementation spec, and not a promise that every idea here should be built immediately. It is a north-star document for future contributors, future LLM collaborators, and future versions of ourselves.
 
+## Status note
+
+This document is a vision document, not a claim that every described subsystem exists today. Current implemented reality is tracked in `aurelian-checkpoint-a72.md`, milestone audits, and the MVP roadmap. Sections about external renderers, Machina UI, Margaret, ray marching, multi-plant/multi-GPU, and LLM/DM gameplay are directional goals unless explicitly marked otherwise.
+
 Aurelian has now crossed an important threshold: it can show a visible triangle through a deliberately over-architected but honest path involving asset manifests, shader artifacts, Core frame-loop orchestration, a Dominatus-backed runtime session, compositor policy, graphics mechanism, swapchain presentation, and a sample-owned window lifecycle.
 
 That triangle is not the product. It is proof that the seams are real.
