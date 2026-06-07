@@ -20,7 +20,7 @@ internal static class Program
         bool skipHold = args.Contains("--no-hold", StringComparer.OrdinalIgnoreCase);
         int frameCount = ParseFrameCount(args);
 
-        Console.WriteLine("Aurelian A68 visible triangle sample");
+        Console.WriteLine("Aurelian A71 visible triangle sample");
         Console.WriteLine("Path: prepared Vulkan setup -> AurelianEngine -> AurelianRuntimeSession -> AurelianFrameLoop -> runtime tick -> frame pump -> runtime compositor policy -> core compositor bridge -> Vulkan compositor -> present -> sample-local event pump/close detection");
         Console.WriteLine($"Validation: {(enableValidation ? "enabled" : "disabled")}");
         Console.WriteLine($"Selected finite frame count: {frameCount} (default {DefaultFrameCount}, max {MaximumFrameCount}).");
@@ -31,7 +31,8 @@ internal static class Program
 
         try
         {
-            sample = VisibleTriangleSampleFrame.Create(enableValidation, frameCount);
+            var shaderProgram = VisibleTriangleShaderAssets.LoadSmokeTriangleShader(Console.Error);
+            sample = VisibleTriangleSampleFrame.Create(enableValidation, frameCount, shaderProgram);
             Console.WriteLine($"Prepared visible Vulkan setup created ({sample.SwapchainDescription}); swapchain images will be acquired per frame.");
             Console.WriteLine("Window events will be pumped before each acquire and after each present; close requests stop the finite frame loop cleanly.");
             Console.WriteLine($"Engine status after start: {sample.Engine.Status}; graphics mode: {sample.Engine.Options.Graphics.Mode} ({sample.Engine.Options.Graphics.Ownership}).");
@@ -85,13 +86,13 @@ internal static class Program
         }
         catch (VisibleTriangleSampleException ex)
         {
-            Console.Error.WriteLine("A68 visible triangle sample could not run in this environment or failed during the Vulkan sample path.");
+            Console.Error.WriteLine("A71 visible triangle sample could not run in this environment or failed during the manifest-backed shader/Vulkan sample path.");
             Console.Error.WriteLine(ex.Message);
             return EnvironmentOrRuntimeFailure;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("A68 visible triangle sample hit an unexpected exception.");
+            Console.Error.WriteLine("A71 visible triangle sample hit an unexpected exception.");
             Console.Error.WriteLine(ex);
             return UnexpectedFailure;
         }
