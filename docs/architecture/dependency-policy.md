@@ -1,5 +1,10 @@
 # Aurelian Dependency and Library Adoption Doctrine
 
+## A72 checkpoint boundary status
+
+A72 adds the checkpoint document `docs/architecture/aurelian-checkpoint-a72.md` and audit `docs/audits/0072-a72-checkpoint-visible-sample-shader-asset-bridge.md`. The checkpoint confirms that the main dependency boundaries still hold after the visible sample and shader asset bridge: Runtime remains free of Graphics/Vulkan/windowing dependencies, Graphics remains free of Runtime/Dominatus policy dependencies, Rendering.Contracts remains neutral, and the sample reaches shader artifacts through `Aurelian.Assets` rather than runtime compiler/tool ownership. Implementation should pause for human review before selecting A73.
+
+
 ## 1. Purpose
 
 Aurelian should not reimplement every low-level or correctness-heavy subsystem from scratch. Physics solvers, navmesh builders, native graphics bindings, parsers, compression libraries, image codecs, and shader validation tools are all areas where subtle mistakes can consume large amounts of engineering time without improving the engine's architectural identity.

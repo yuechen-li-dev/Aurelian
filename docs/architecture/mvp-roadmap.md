@@ -1,5 +1,10 @@
 # Aurelian MVP Roadmap
 
+## A72 checkpoint pause
+
+A72 adds `docs/architecture/aurelian-checkpoint-a72.md` and `docs/audits/0072-a72-checkpoint-visible-sample-shader-asset-bridge.md` as the checkpoint after the visible triangle sample and shader asset manifest bridge. The checkpoint records what is demoable, what is real implementation vs scaffold, which dependency boundaries held, known technical debt, and next milestone clusters. Implementation should pause for human review before selecting A73.
+
+
 - **A0 — Bootstrap:** create the clean solution, strict build discipline, architecture charter, project skeleton, and smoke tests without external runtime/vendor links. **Completed.**
 - **A1 — Vendor Dominatus runtime smoke:** vendor Dominatus under `vendor/Dominatus/`, add buildable Dominatus projects to the solution, and add the first runtime smoke while keeping renderer work out of scope. **Completed.**
 - **A2 — SDSL-V convergence audit:** establish WyrmCoil Rust SDSL-V as reference/inspiration, classify `src/StriV.ShaderPipeline` as migration scaffold, and keep Stride SDSL/mixins as historical reference rather than native Aurelian input. **Completed.**
