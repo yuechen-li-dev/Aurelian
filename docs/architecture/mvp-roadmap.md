@@ -438,6 +438,12 @@ path = "Shaders/SmokeTriangle/shader.toml"
 
 The M0 loader parses these shader references, validates required ids and paths, rejects duplicate ids, absolute paths, and `..` traversal segments, resolves accepted artifact paths relative to the manifest directory, and delegates artifact loading to `ShaderArtifactLoader`. Loaded shader assets expose the manifest shader id, resolved shader artifact manifest path, neutral `CompiledShaderProgram`, and asset-level diagnostics.
 
-A70 deliberately does not add materials, meshes, textures, an asset manager/cache, hot reload, runtime shader compilation, graphics resource creation, or a Graphics dependency in `Aurelian.Assets`. The visible triangle sample has an `Assets/assets.toml` staged for A71 but still loads the shader artifact directly in code.
+A70 deliberately does not add materials, meshes, textures, an asset manager/cache, hot reload, runtime shader compilation, graphics resource creation, or a Graphics dependency in `Aurelian.Assets`. A71 now consumes this manifest from the visible triangle sample.
 
-Next: A71 should make `samples/Aurelian.VisibleTriangle` load `Assets/assets.toml`, resolve `smoke_triangle`, pass the loaded `CompiledShaderProgram` into pipeline setup, and remove the sample code's direct reference to `Shaders/SmokeTriangle/shader.toml`.
+## A71 — Visible sample loads shader through asset manifest M0
+
+Status: implemented.
+
+A71 makes `samples/Aurelian.VisibleTriangle` load `Assets/assets.toml`, resolve shader id `smoke_triangle`, and pass the loaded `CompiledShaderProgram` into its existing Vulkan graphics pipeline setup. The sample C# code no longer directly loads `Assets/Shaders/SmokeTriangle/shader.toml`; that path is now referenced by the manifest only.
+
+A71 remains sample asset-manifest consumption only. There is still no material, mesh, texture, asset manager/cache/hot reload, runtime shader compilation, runtime DXC/SDSL dependency, `Aurelian.Host`, Graphics dependency in Assets, or Assets dependency in Graphics. Recommended next milestone: **A72 — Aurelian checkpoint audit after visible sample + shader asset bridge**.

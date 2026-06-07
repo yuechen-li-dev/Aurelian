@@ -1,4 +1,3 @@
-using Aurelian.Assets.Shaders;
 using Aurelian.Core.Compositor;
 using Aurelian.Core.Engine;
 using Aurelian.Core.Engine.Frames;
@@ -107,7 +106,7 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
 
     public string SwapchainDescription => $"{swapchain.Facts.Width}x{swapchain.Facts.Height} {swapchain.Facts.SelectedFormat} {swapchain.Facts.SelectedPresentMode}";
 
-    public static VisibleTriangleSampleFrame Create(bool enableValidation, int frameCount)
+    public static VisibleTriangleSampleFrame Create(bool enableValidation, int frameCount, CompiledShaderProgram shaderProgram)
     {
         if (frameCount <= 0)
         {
@@ -164,7 +163,6 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
                 AurelianVulkanTexture offscreenColor = CreateOffscreenColorTarget(plant, allocator, swapchain, offscreenFormat);
                 AurelianVulkanRenderPass renderPass = CreateRenderPass(plant, offscreenFormat);
                 AurelianVulkanFramebuffer framebuffer = CreateFramebuffer(plant, renderPass, offscreenColor, swapchain);
-                CompiledShaderProgram shaderProgram = LoadTriangleCompiledShaderProgram();
                 AurelianVulkanGraphicsPipeline pipeline = CreatePipeline(plant, renderPass, shaderProgram);
                 AurelianVulkanBuffer vertexBuffer = CreateVertexBuffer(plant, allocator);
 
@@ -428,20 +426,6 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
         Ensure(submit.Success, $"Offscreen triangle submit failed: {FormatDiagnostics(submit)}");
     }
 
-    private static CompiledShaderProgram LoadTriangleCompiledShaderProgram()
-    {
-        string manifestPath = Path.Combine(
-            AppContext.BaseDirectory,
-            "Assets",
-            "Shaders",
-            "SmokeTriangle",
-            "shader.toml");
-
-        ShaderArtifactLoadResult result = ShaderArtifactLoader.LoadCompiledShaderProgram(manifestPath);
-        Ensure(result.Success, $"Shader artifact loading failed: {FormatDiagnostics(result)}");
-        return result.Program!;
-    }
-
     private static byte[] CreateTriangleVertexBytes()
     {
         float[] vertices =
@@ -477,8 +461,6 @@ internal sealed class VisibleTriangleSampleFrame : IDisposable
             throw new VisibleTriangleSampleException(message);
         }
     }
-
-    private static string FormatDiagnostics(ShaderArtifactLoadResult result) => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 
     private static string FormatDiagnostics(VulkanInitResult result) => string.Join(Environment.NewLine, result.Diagnostics.Select(static diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 

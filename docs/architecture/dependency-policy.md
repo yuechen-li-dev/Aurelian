@@ -457,3 +457,10 @@ C# SPIR-V byte arrays are fixture/bootstrap-only and are not the primary runtime
 A70 allows `Aurelian.Assets` asset manifests to reference existing shader artifact TOML files through repeated `[[shaders]]` entries. The asset layer owns the manifest schema, validation, path safety rules, manifest-relative path resolution, and mapping of shader artifact load failures into asset diagnostics. The shader artifact loader still returns neutral `CompiledShaderProgram` contracts from `Aurelian.Rendering.Contracts`.
 
 This does not relax the graphics boundary. `Aurelian.Assets` must not reference `Aurelian.Graphics`, Vulkan/Silk graphics APIs, swapchain/surface/window concepts, runtime DXC, VMA/VMASharp, Vortice, service locators, global singletons, reflection factories, CodeReferences, or vendor source. A70 also does not introduce material, mesh, texture, cache, hot-reload, or graphics-resource ownership semantics.
+
+
+## A71 visible sample manifest consumption policy
+
+A71 allows the visible triangle sample executable to reference `Aurelian.Assets` and call `ShaderAssetManifestLoader` directly as sample-local composition code. The sample resolves `Assets/assets.toml`, selects shader id `smoke_triangle`, and gives the resulting neutral `CompiledShaderProgram` to the existing `Aurelian.Graphics` pipeline setup.
+
+This is not a new engine-wide asset manager boundary. The policy remains that `Aurelian.Assets` owns manifest parsing/validation and artifact loading while staying free of `Aurelian.Graphics`, Vulkan/Silk graphics APIs, swapchain/surface/window concepts, and graphics resources. `Aurelian.Graphics` continues to consume neutral shader contracts only and must not reference `Aurelian.Assets`, `Aurelian.Shaders`, DXC, SDSL parsing/emission, asset manifests, service locators, global singletons, reflection factories, CodeReferences, or vendor source. A71 adds no material, mesh, texture, cache, hot-reload, or runtime shader compilation semantics.
