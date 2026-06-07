@@ -452,3 +452,21 @@ Status: implemented.
 A71 makes `samples/Aurelian.VisibleTriangle` load `Assets/assets.toml`, resolve shader id `smoke_triangle`, and pass the loaded `CompiledShaderProgram` into its existing Vulkan graphics pipeline setup. The sample C# code no longer directly loads `Assets/Shaders/SmokeTriangle/shader.toml`; that path is now referenced by the manifest only.
 
 A71 remains sample asset-manifest consumption only. There is still no material, mesh, texture, asset manager/cache/hot reload, runtime shader compilation, runtime DXC/SDSL dependency, `Aurelian.Host`, Graphics dependency in Assets, or Assets dependency in Graphics. Recommended next milestone: **A72 — Aurelian checkpoint audit after visible sample + shader asset bridge**.
+
+
+## A72 — Aurelian checkpoint audit after visible sample + shader asset bridge
+
+Status: implemented.
+
+A72 records the post-visible-sample checkpoint in `docs/architecture/aurelian-checkpoint-a72.md` and `docs/audits/0072-a72-checkpoint-visible-sample-shader-asset-bridge.md`. The checkpoint confirms the current real proof path, project roles, dependency boundaries, known debts, and next milestone clusters after the asset-manifest shader bridge.
+
+The checkpoint thesis remains: Aurelian is not an engine with AI bolted on; Aurelian is an engine whose core orchestration model is Dominatus-shaped. It explicitly pauses implementation for human review before the next direction is chosen.
+
+
+## A73 — Vision 1 documentation alignment
+
+Status: implemented as docs-only vision alignment.
+
+A73 integrates `docs/architecture/visions-1.md` as Aurelian Vision 1: the long-term doctrine for explicit Dominatus-native orchestration, Core as the integration spine, Runtime as the Dominatus-backed policy/session layer, Graphics as Vulkan mechanism, Rendering.Contracts as neutral DTOs, shader artifact/asset seams, external dumb renderer strategy, Wyrmcoil material TOML / flattened MaterialX direction, Machina UI/Avalonia direction, Margaret/reference-renderer plant direction, ray marching taxonomy, multi-plant/multi-GPU future seams, and bounded LLM/DM gameplay direction.
+
+A73 does not implement any features, projects, packages, renderer adapters, UI imports, material systems, Margaret integration, ray marching, LLM/DM systems, multi-GPU work, vendor changes, CodeReferences changes, or dependency graph changes. Implementation pauses after A73 until human review selects A74+.

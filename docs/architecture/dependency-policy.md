@@ -23,6 +23,10 @@ The spine includes the world model, runtime, Dominatus orchestration, actuators,
 
 Libraries may implement backend details behind those contracts. They can provide native API bindings, physics math and simulation internals, pathfinding queries, TOML syntax parsing, deterministic JSON support, image/codec infrastructure, or optional shader validation, but they must not replace Aurelian's architectural boundaries with their own object model.
 
+## Vision 1 relationship
+
+`docs/architecture/visions-1.md` is aspirational north-star doctrine. This dependency policy remains authoritative for current project edges and package boundaries. Future external renderer, UI, material, reference-renderer, raymarch, multi-plant, or LLM/DM integrations must preserve policy/mechanism separation and keep external libraries behind Aurelian-owned contracts rather than letting them define the engine spine.
+
 ## 3. When to use a library
 
 | Good reason | Explanation |
