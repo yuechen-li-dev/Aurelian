@@ -270,3 +270,11 @@ A64 keeps Runtime free of graphics/window/backend work, leaves world/render extr
 A67 removes the visible triangle sample's one-frame acquire/present limitation while keeping graphics ownership sample-local. `samples/Aurelian.VisibleTriangle` now defaults to a finite three-frame run, accepts `--frames N` for positive values capped at 300, acquires a fresh swapchain image from the sample input provider for each frame, builds frame-specific `PresentationTargetRef` and `AurelianFrameInput` values, lets the Core frame loop/runtime tick/compositor spine process each frame, and presents the exact acquired image through a sample-local FIFO presentation mechanism.
 
 The M0 triangle draw remains static: setup renders the triangle once into an offscreen texture, then registers finite per-frame `PlantOutputRef` wrappers that all resolve to that same texture for the planned frame IDs. Core still does not create Vulkan plants, windows, surfaces, swapchains, graphics resources, or an infinite host loop. Runtime shader compilation, asset loading, render graph integration, input, scheduler/threading, VMA/VMASharp, Vortice, and `Aurelian.Host` remain deferred.
+
+## A70 — Asset manifest shader artifact references M0
+
+Status: implemented.
+
+A70 connects the asset manifest TOML path to checked-in shader artifacts without changing the visible sample runtime flow yet. `Aurelian.Assets` now accepts repeated `[[shaders]]` entries with an `id` and a relocatable relative `path` to a shader artifact TOML file, validates missing ids/paths, duplicate ids, absolute paths, and `..` traversal segments, resolves accepted paths relative to the asset manifest directory, and loads the referenced artifact through the existing hash-checking `ShaderArtifactLoader` into neutral `CompiledShaderProgram` values.
+
+This is still shader-reference M0 only. There is no material, mesh, texture, asset manager/cache, hot reload, runtime shader compilation, Graphics dependency in Assets, VMA/VMASharp, Vortice, service locator, singleton, reflection construction path, CodeReferences change, or vendor change. The visible triangle sample now includes `Assets/assets.toml` for A71, but its code still loads `Assets/Shaders/SmokeTriangle/shader.toml` directly until the next milestone.

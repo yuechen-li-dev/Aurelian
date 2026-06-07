@@ -423,3 +423,21 @@ A69 introduces the primary file-based shader artifact path. `Aurelian.Shaders` n
 `Aurelian.Assets` now loads `shader.toml`, validates the format and stage records, resolves SPIR-V files relative to the manifest directory, decodes `hex` files when requested, verifies hashes over decoded/raw bytes, rejects duplicates/missing/empty stages, and returns neutral `CompiledShaderProgram` contracts. `Aurelian.Graphics` continues to consume only `CompiledShaderProgram` and does not reference `Aurelian.Shaders` or `Aurelian.Assets`.
 
 The visible triangle sample now copies `Assets/Shaders/SmokeTriangle/**` to its output and loads its checked-in `.spv.hex` shader artifact through `Aurelian.Assets` at startup. It no longer uses sample-local static SPIR-V arrays and still performs no runtime SDSL-V/HLSL compilation. Recommended next milestone: **A70 — Asset manifest references shader artifacts M0**.
+
+## A70 — Asset manifest shader artifact references M0
+
+Status: implemented.
+
+A70 extends the asset manifest schema with repeated `[[shaders]]` entries:
+
+```toml
+[[shaders]]
+id = "smoke_triangle"
+path = "Shaders/SmokeTriangle/shader.toml"
+```
+
+The M0 loader parses these shader references, validates required ids and paths, rejects duplicate ids, absolute paths, and `..` traversal segments, resolves accepted artifact paths relative to the manifest directory, and delegates artifact loading to `ShaderArtifactLoader`. Loaded shader assets expose the manifest shader id, resolved shader artifact manifest path, neutral `CompiledShaderProgram`, and asset-level diagnostics.
+
+A70 deliberately does not add materials, meshes, textures, an asset manager/cache, hot reload, runtime shader compilation, graphics resource creation, or a Graphics dependency in `Aurelian.Assets`. The visible triangle sample has an `Assets/assets.toml` staged for A71 but still loads the shader artifact directly in code.
+
+Next: A71 should make `samples/Aurelian.VisibleTriangle` load `Assets/assets.toml`, resolve `smoke_triangle`, pass the loaded `CompiledShaderProgram` into pipeline setup, and remove the sample code's direct reference to `Shaders/SmokeTriangle/shader.toml`.

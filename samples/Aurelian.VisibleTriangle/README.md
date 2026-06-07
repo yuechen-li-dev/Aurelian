@@ -1,6 +1,6 @@
 # Aurelian Visible Triangle sample
 
-This A69 sample executable demonstrates the current prepared-visible Aurelian engine spine across a small finite set of visible frames:
+This A70 sample executable demonstrates the current prepared-visible Aurelian engine spine across a small finite set of visible frames:
 
 ```text
 sample-owned prepared Vulkan setup
@@ -18,6 +18,16 @@ sample-owned prepared Vulkan setup
   -> per-frame present
   -> sample-local event pump after present
 ```
+
+`Assets/assets.toml` is now checked in for A71 and contains the future manifest reference:
+
+```toml
+[[shaders]]
+id = "smoke_triangle"
+path = "Shaders/SmokeTriangle/shader.toml"
+```
+
+The sample code does **not** consume that manifest yet; until A71 it still loads the shader artifact TOML directly.
 
 ## Run
 
@@ -45,6 +55,6 @@ If Vulkan, presentation, or the windowing platform is unavailable, the sample pr
 
 ## Boundaries
 
-The sample deliberately does **not** implement an infinite game loop, editor host, `Aurelian.Host`, production input system, engine-owned window lifecycle, full asset manager, world integration, render graph, scheduler/threading system, differential compositor, runtime shader compilation, or a runtime DXC/SDSL dependency. The triangle shaders are checked in as the A69 primary artifact shape: TOML metadata (`shader.toml`), text-safe `VSMain.spv.hex`/`PSMain.spv.hex` files decoded by `Aurelian.Assets` into raw SPIR-V bytes, and optional debug `generated.hlsl`. C# SPIR-V byte arrays are fixture/bootstrap-only and are no longer used by the sample runtime path.
+The sample deliberately does **not** implement an infinite game loop, editor host, `Aurelian.Host`, production input system, engine-owned window lifecycle, full asset manager, world integration, render graph, scheduler/threading system, differential compositor, material/mesh/texture asset loading, runtime shader compilation, or a runtime DXC/SDSL dependency. The triangle shaders are checked in as the A69/A69b primary artifact shape: TOML metadata (`shader.toml`), text-safe `VSMain.spv.hex`/`PSMain.spv.hex` files decoded by `Aurelian.Assets` into raw SPIR-V bytes, and optional debug `generated.hlsl`. C# SPIR-V byte arrays are fixture/bootstrap-only and are no longer used by the sample runtime path.
 
 The sample still owns Vulkan/window/swapchain setup externally and passes prepared resources into Core. Core frame loop and frame pump remain free of Vulkan/window/swapchain creation.
